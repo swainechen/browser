@@ -1,0 +1,30 @@
+# FULLSPECIES, SPECIES, and REF as NONE means use Kraken result to figure it out
+# to specify a new one, can use --config SPECIES=xyz when calling snakemake
+# be sure to set all 3 of them
+{
+    "FULLSPECIES": "NONE",
+    "SPECIES": "NONE",
+    "REF": "NONE",
+    "LFVCF": "/path/to/lf-vcf.pl",
+    "TABIX": "/path/to/tabix",
+    "BGZIP": "/path/to/bgzip",
+    "SAMTOOLS": "/path/to/samtools",
+    "BWA": "/path/to/bwa",
+    "LOFREQ": "/path/to/lofreq",
+    "BEDTOOLS": "/path/to/bedtools",
+    "PICARD": "/path/to/picard.jar",
+    "HTSEQ_COUNT": "/path/to/htseq-count",
+    "JAVA": "/path/to/java",
+    "GERMS_WGS": "/path/to/GERMS-wgs.pl",
+    "LACER": "/path/to/lacer.pl",
+    "LACER_STOP": "3000000",
+    "LACEPR": "/path/to/lacepr",
+    "SRST2WRAP": "/path/to/GERMS-srst2.pl",
+    "GETFILES": "/path/to/get_files.pl",
+    "GCOVGRAPH": "/path/to/gcov-graph.R",
+    "VFFASTA": "/path/to/virulence-fasta.pl",
+    "DB_SRST2": "/path/to/import-resistance.pl",
+    "DB_POST": "/path/to/postprocess-db.pl",
+    "IMPORT_FASTQ": "/path/to/import-fastq.pl",
+    "MYSQL_REF": "/path/to/mysql-get-reference.pl"
+}

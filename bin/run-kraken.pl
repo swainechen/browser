@@ -1,0 +1,184 @@
+#!/usr/bin/perl -w
+#
+# just a kraken run
+# taken from GERMS-wgs.pl initially
+#
+use File::Spec;
+use File::Temp;
+use Cwd;
+use GERMS;
+use Getopt::Long;
+&Getopt::Long::Configure("pass_through");
+
+my $KRAKEN_BIN = "/mnt/software/stow/kraken-0.10.5-beta/bin/kraken";
+my $KRAKEN_REPORT = "/mnt/software/stow/kraken-0.10.5-beta/bin/kraken-report";
+my $KRAKEN_DB = "/mnt/genomeDB/misc/softwareDB/kraken/minikraken_20141208";
+my $SEQTK = "/mnt/software/stow/seqtk-1.0/bin/seqtk";
+my $q1 = "";
+my $q2 = "";
+my $show_help = 0;
+my $VERBOSE = 0;
+my $num_reads = 100000;
+my $seed = 11;
+my $current_dir;
+
+GetOptions (
+  'q1=s' => \$q1,
+  'q2=s' => \$q2,
+  'n=i' => \$num_reads,
+  'seed=i' => \$seed,
+  'help' => \$show_help,
+  'verbose' => \$VERBOSE
+);
+
+if ($show_help) {
+  &print_usage;
+  exit;
+}
+if ($q1 eq "") {
+  &print_usage;
+  print "Error: No q1 file specified\n";
+  exit;
+}
+if (!-f $q1) {
+  &print_usage;
+  print "Error: can't find q1 file $q1\n";
+  exit;
+}
+if ($q2 ne "" && !-f $q2) {
+  &print_usage;
+  print "Error: can't find q2 file $q2\n";
+  exit;
+}
+
+$q1 = File::Spec->rel2abs($q1);
+if ($q2 ne "") {
+  $q2 = File::Spec->rel2abs($q2);
+}
+
+$current_dir = getcwd;
+$tempdir = File::Temp::tempdir( CLEANUP => 1 );
+chdir($tempdir);
+
+$q1 = GERMS::downsample($q1, $SEQTK, $num_reads, $seed, $tempdir);
+if ($q2 ne "") {
+  $q2 = GERMS::downsample($q2, $SEQTK, $num_reads, $seed, $tempdir);
+}
+
+if ($q1 ne "" && -f $q1) {
+  print run_kraken($q1, $q2), "\n";
+}
+
+chdir($current_dir);
+
+sub print_usage {
+  print "Usage: $0 -q1 <fastq1 file> [ -q2 <fastq2 file> ] [ -n <num reads> ] [ -seed <seed> ] [ -verbose ]\n";
+  print "  Will run Kraken on the fastq files\n";
+  print "  Default is to process $num_reads reads\n";
+  print "  Seed sets the seed for seqtk to do downsampling for # of reads (default $seed)\n";
+  print "  Default is to just give a final classification\n";
+  print "  With -verbose provide all Kraken output\n";
+  print "  Note: only q1 is required, q2 is optional\n";
+  print "        q1 and q2 files should be the same type (fasta/fastq, gzipped or not)\n";
+}
+
+sub run_kraken {
+  # these files should be downsampled already
+  my ($q1, $q2) = @_;
+  my $expected_file = "kraken-out.tmp";
+  my $command;
+  my @f;
+  my @g;
+  my $i;
+  my $max;
+  my $backup_max;
+  my $output;
+  my $return;
+  my $return_index;
+  my $backup_return;
+  my $backup_return_index;
+  my @ft = GERMS::file_type($q1);
+
+  $command = "$KRAKEN_BIN --db $KRAKEN_DB";
+  if (lc($ft[0]) eq "fasta") {
+    $command .= " --fasta-input";
+  } else {
+    $command .= " --fastq-input";
+  }
+  if (lc($ft[1]) eq "gzip") {
+    $command .= " --gzip-compressed";
+  }
+  if ($q1 eq $q2 || $q2 eq "") {
+    $command .= " $q1";
+  } else {
+    $command .= " --paired $q1 $q2";
+  }
+  $command .= " 2>&1 > $expected_file";
+  # for the kraken run, we're using the trick of 'command 2>&1 > output'
+  # this puts stdout into the output file, and stderr shows up on stdout
+  # so we can capture stderr with backticks
+  # this is because we want the classifications into the output file
+  # and the summary comes on stderr which we want to parse
+  $output = `$command`;
+  $output =~ s/\r/\n/g;
+  if ($VERBOSE) {
+    print $output;
+    @f = split /\n/, $output;
+    foreach $i (@f) {
+      if ($i =~ /(\d+) sequences .* processed/) {
+        print "Kraken: $1 total sequences processed\n";
+      } elsif ($i =~ /^\s*\d+ sequences classified/) {
+        $i =~ s/^\s+//;
+        print "Kraken: $i\n";
+      } elsif ($i =~ /^\s*\d+ sequences unclassified/) {
+        $i =~ s/^\s+//;
+        print "Kraken: $i\n";
+      }
+    }
+  }
+  if (-f $expected_file) {
+    $command = "$KRAKEN_REPORT --db $KRAKEN_DB $expected_file";
+    $output = `$command`;
+    print $output if $VERBOSE;
+    @f = split /\n/, $output;
+    $max = 0;
+    $backup_max = 0;
+    $return = "";
+    $return_index = -1;
+    $backup_return = "";
+    $backup_return_index = -1;
+    foreach $i (0..$#f) {
+      $f[$i] =~ s/^\s+//;
+      @g = split /\t/, $f[$i];
+      if ($g[3] eq "G") {
+        if ($g[0] > $backup_max) {
+          $backup_max = $g[0];
+          $backup_return = $g[5];
+          $backup_return =~ s/^\s+//;
+          $backup_return_index = $i;
+        }
+      }
+      if ($g[3] eq "S") {
+        if ($g[0] > $max) {
+          $max = $g[0];
+          $return = $g[5];
+          $return =~ s/^\s+//;
+          $return_index = $i;
+        }
+      }
+    }
+    unlink($expected_file);
+    if ($return_index >= 0) {
+      print "Kraken classification line: $f[$return_index]\n" if $VERBOSE;
+      return("$return\t$max");
+    } elsif ($backup_return_index >= 0) {
+      print "Kraken classification line: $f[$backup_return_index]" if $VERBOSE;
+      return("$backup_return\t$backup_max");
+    }
+  } else {
+    print "Couldn't find $expected_file file after initial Kraken run, skipping...\n" if $VERBOSE;
+    return("");
+  }
+  return("");
+}
+
