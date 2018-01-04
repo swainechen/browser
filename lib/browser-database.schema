@@ -1,0 +1,305 @@
+DROP TABLE IF EXISTS Fastq;
+DROP TABLE IF EXISTS Assembly;
+DROP TABLE IF EXISTS Resistance;
+DROP TABLE IF EXISTS Genes;
+DROP TABLE IF EXISTS MLST;
+DROP TABLE IF EXISTS Tips;
+
+CREATE TABLE Tips (
+  TIP INT NOT NULL AUTO_INCREMENT,
+  Run VARCHAR(255) NOT NULL,
+  PRIMARY KEY (TIP)
+) ENGINE = INNODB;
+
+CREATE TABLE Files (
+  TIP INT NOT NULL,
+  Type VARCHAR(63),
+  Filename VARCHAR(255),
+  MD5 VARCHAR(63),
+  DateStamp VARCHAR(63),
+  KEY (TIP, Type, MD5),
+  FOREIGN KEY (TIP) REFERENCES Tips (TIP)
+) ENGINE = INNODB;
+
+CREATE TABLE Fastq (
+  TIP INT NOT NULL,
+  Technology VARCHAR(63) NOT NULL,
+  Machine VARCHAR(63),
+  Paired VARCHAR(7),
+  NumReads INT NOT NULL,
+  ReadLength INT NOT NULL,
+  Kraken VARCHAR(255),
+  KrakenPercent FLOAT,
+  KEY (TIP, Technology),
+  FOREIGN KEY (TIP) REFERENCES Tips (TIP)
+) ENGINE = INNODB;
+
+CREATE TABLE ReferenceGenomes (
+  Species VARCHAR(63) NOT NULL,
+  ReferenceFile VARCHAR(255) NOT NULL,
+  ReferenceMD5 VARCHAR(63) NOT NULL,
+  ReferenceName VARCHAR(255),
+  GFFFile VARCHAR(255),
+  GFFMD5 VARCHAR(63),
+  NumReplicons INT NOT NULL,
+  ChromosomeLength INT NOT NULL,
+  TotalLength INT NOT NULL,
+  URL VARCHAR(255),
+  DefaultReference INT(1) NOT NULL,
+  KEY (Species, ReferenceFile)
+) ENGINE = INNODB;
+
+CREATE TABLE Variants (
+  TIP INT NOT NULL,
+  LofreqSourceFileType VARCHAR(63) NOT NULL,
+  LofreqSourceFileMD5 VARCHAR(63) NOT NULL,
+  GcovSourceFileType VARCHAR(63) NOT NULL,
+  GcovSourceFileMD5 VARCHAR(63) NOT NULL,
+  Species VARCHAR(63) NOT NULL,
+  Reference VARCHAR(255) NOT NULL,
+  NumSNPs INT NOT NULL,
+  NumINDELs INT NOT NULL,
+  KEY (TIP, Reference),
+  FOREIGN KEY (TIP) REFERENCES Tips (TIP)
+) ENGINE = INNODB;
+
+CREATE TABLE Assembly (
+  TIP INT NOT NULL,
+  SourceFileType VARCHAR(63) NOT NULL,
+  SourceFileMD5 VARCHAR(63) NOT NULL,
+  assembly VARCHAR(255),
+  average_length INT(11),
+  closest_reference MEDIUMTEXT,
+  command LONGTEXT,
+  date_run MEDIUMTEXT,
+  finishing VARCHAR(5),
+  GERMS_MD5 MEDIUMTEXT,
+  host MEDIUMTEXT,
+  max_length INT(11),
+  min_length INT(11),
+  N50 INT(11),
+  N50_number INT(11),
+  N90 INT(11),
+  N90_number INT(11),
+  name MEDIUMTEXT,
+  num_contigs INT(11),
+  num_reads INT(11),
+  R1 LONGTEXT,
+  R1_MD5 MEDIUMTEXT,
+  R2 LONGTEXT,
+  R2_MD5 MEDIUMTEXT,
+  read_length INT(11),
+  scaffolding VARCHAR(5),
+  temp VARCHAR(26),
+  total_length INT(11),
+  user TINYTEXT,
+  velvetg_cov_cutoff INT(11),
+  velvetg_exp_cov INT(11),
+  velveth_k INT(11),
+  assembly_reads INT(11),
+  KEY (TIP, Assembly),
+  FOREIGN KEY (TIP) REFERENCES Tips (TIP)
+) ENGINE = INNODB;
+
+CREATE TABLE Resistance (
+  TIP INT NOT NULL,
+  SourceFileType VARCHAR(63) NOT NULL,
+  SourceFileMD5 VARCHAR(63) NOT NULL,
+  SOURCE VARCHAR(63) NOT NULL,
+  /* SOURCE is supposed to be FASTQ or ASSEMBLY */
+  DB VARCHAR(255) NOT NULL,
+  /* DB is the fasta database queried against */
+  class VARCHAR(31) NOT NULL,
+  gene VARCHAR(63) NOT NULL,
+  allele VARCHAR(63) NOT NULL,
+  coverage FLOAT NOT NULL,
+  depth FLOAT NOT NULL,
+  diffs VARCHAR(255),
+  uncertainty VARCHAR(255),
+  divergence FLOAT,
+  length INT NOT NULL,
+  maxMAF FLOAT,
+  clusterid INT NOT NULL,
+  seqid VARCHAR(63) NOT NULL,
+  annotation VARCHAR(255),
+  KEY (TIP, SOURCE, class, gene, allele),
+  FOREIGN KEY (TIP) REFERENCES Tips (TIP)
+) ENGINE = INNODB;
+
+CREATE TABLE Genes (
+  TIP INT NOT NULL,
+  SourceFileType VARCHAR(63) NOT NULL,
+  SourceFileMD5 VARCHAR(63) NOT NULL,
+  SOURCE VARCHAR(63) NOT NULL,
+  /* SOURCE is supposed to be FASTQ or ASSEMBLY */
+  DB VARCHAR(255) NOT NULL,
+  /* DB is the fasta database queried against */
+  gene VARCHAR(63) NOT NULL,
+  allele VARCHAR(63) NOT NULL,
+  coverage FLOAT NOT NULL,
+  depth FLOAT NOT NULL,
+  diffs VARCHAR(255),
+  uncertainty VARCHAR(255),
+  divergence FLOAT,
+  length INT NOT NULL,
+  maxMAF FLOAT,
+  clusterid INT NOT NULL,
+  seqid VARCHAR(63) NOT NULL,
+  annotation VARCHAR(255),
+  KEY (TIP, SOURCE, gene, allele),
+  FOREIGN KEY (TIP) REFERENCES Tips (TIP)
+) ENGINE = INNODB;
+
+CREATE TABLE MLST (
+  TIP INT NOT NULL,
+  SourceFileType VARCHAR(63) NOT NULL,
+  SourceFileMD5 VARCHAR(63) NOT NULL,
+  SOURCE VARCHAR(63) NOT NULL,
+  /* SOURCE is supposed to be FASTQ or ASSEMBLY */
+  MLSTDatabase VARCHAR(255) NOT NULL,
+  MLST VARCHAR(15),
+  Profile VARCHAR(255),
+  mismatches VARCHAR(255),
+  uncertainty VARCHAR(255),
+  depth FLOAT NOT NULL,
+  maxMAF FLOAT,
+  KEY (TIP, SOURCE, MLSTDatabase),
+  FOREIGN KEY (TIP) REFERENCES Tips (TIP)
+) ENGINE = INNODB;
+
+CREATE VIEW Overview AS
+  SELECT a.Tip,
+         Run,
+         Kraken,
+         MLSTDatabase,
+         MLST,
+         MAX( IF(Type='lofreq.gz', Filename, NULL) ) AS Lofreq,
+         MAX( IF(Type='gcov.gz', Filename, NULL) ) AS Gcov,
+         MAX( IF(Type='srst2.gz', Filename, NULL) ) AS SRST2,
+         MAX( IF(Type='tgz', Filename, NULL) ) as TGZ
+  FROM Tips a LEFT JOIN Files b ON a.TIP = b.TIP
+              LEFT JOIN Fastq c ON a.TIP = c.TIP
+              LEFT JOIN MLST d ON a.TIP = d.TIP
+  GROUP BY a.Tip;
+
+CREATE VIEW ResistanceList AS
+  SELECT a.Tip,
+         Run,
+         GROUP_CONCAT( IF( class='AGly',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Aminoglycosides,
+         GROUP_CONCAT( IF( class='Bla',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Betalactamases,
+         GROUP_CONCAT( IF( class='Colistin',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Colistin,
+         GROUP_CONCAT( IF( class='Fcyn',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Fosfomycin,
+         GROUP_CONCAT( IF( class='Flq',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Fluoroquinolones,
+         GROUP_CONCAT( IF( class='Gly',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Glycopeptides,
+         GROUP_CONCAT( IF( class='MLS',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as MLS,
+         GROUP_CONCAT( IF( class='Phe',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Phenicols,
+         GROUP_CONCAT( IF( class='Rif',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Rifampicin,
+         GROUP_CONCAT( IF( class='Sul',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Sulfonamides,
+         GROUP_CONCAT( IF( class='Tet',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Tetracyclines,
+         GROUP_CONCAT( IF( class='Tmt',
+           REVERSE(SUBSTRING(REVERSE(gene), LOCATE("_",REVERSE(gene)) + 1)),
+           NULL ) ) as Trimethoprim
+  FROM Tips a LEFT JOIN Resistance b ON a.TIP = b.TIP
+  GROUP BY a.TIP;
+
+CREATE TABLE Studies (
+  Run VARCHAR(255) NOT NULL,
+  MUX VARCHAR(63),
+  SampleName VARCHAR(255),
+  Machine VARCHAR(63),
+  Paired VARCHAR(4) NOT NULL,
+  ReadLength INT,
+  LibraryPrep VARCHAR(255),
+  SequencingType VARCHAR(63) NOT NULL,
+  ChenLabContact VARCHAR(63) NOT NULL,
+  OtherContact VARCHAR(255),
+  Study VARCHAR(255),
+  PublicAccession VARCHAR(255),
+  PrivacyCode VARCHAR(63),
+  Notes MEDIUMTEXT,
+  DateStamp VARCHAR(63) NOT NULL,
+  PRIMARY KEY (Run)
+) ENGINE = INNODB;
+
+CREATE TABLE GBS (
+  Run VARCHAR(255) NOT NULL,
+  DisplayName VARCHAR(255),
+  /* Canonical date will be YYYY-MM-DD */
+  IsolationDate VARCHAR(63),
+  Serotype VARCHAR(15),
+  Country VARCHAR(63),
+  Host VARCHAR(63),
+  Disease VARCHAR(63),
+  ClinicalOrigin VARCHAR(63),
+  ST283PCR VARCHAR(4),
+  Comments LONGTEXT,
+  Reference MEDIUMTEXT,
+  DateStamp VARCHAR(63) NOT NULL,
+  PRIMARY KEY (Run)
+) ENGINE = INNODB;
+
+/* Generating the same tables as before */
+CREATE TABLE GBS_BROWSER AS SELECT
+  Tips.TIP AS number,
+  Tips.Run AS run,
+  CAST(CONCAT("Tip_", Tips.TIP) AS CHAR) AS treename,
+  if (Studies.PrivacyCode = "Public" or
+     (Studies.PrivacyCode IS NULL and
+       (Tips.Run REGEXP '^[DES]RR' or Tips.Run REGEXP '^GC[AF]')),
+     "Y", "N") AS public,
+  IFNULL(GBS.DisplayName, IFNULL(Studies.SampleName, Tips.Run)) AS display_name,
+  GBS.IsolationDate as final_year,
+  if (MLST.MLSTDatabase = "GBS", MLST, NULL) AS final_mlst,
+  GBS.Serotype as final_serotype,
+  GBS.Country as final_country,
+  GBS.Host as final_host,
+  GBS.Disease as final_disease,
+  Studies.PrivacyCode as final_study,
+  GBS.Comments as comments,
+  ResistanceList.Aminoglycosides as aminoglycosides,
+  ResistanceList.Betalactamases as betalactamases,
+  ResistanceList.Colistin as colistin,
+  ResistanceList.Fosfomycin as fosfomycin,
+  ResistanceList.Fluoroquinolones as fluoroquinolones,
+  ResistanceList.Glycopeptides as glycopeptides,
+  ResistanceList.MLS as mls,
+  ResistanceList.Phenicols as phenicols,
+  ResistanceList.Rifampicin as rifampicin,
+  ResistanceList.Sulfonamides as sulfonamides,
+  ResistanceList.Tetracyclines as tetracyclines,
+  ResistanceList.Trimethoprim as trimethoprim
+FROM Tips
+  LEFT JOIN Studies ON Tips.Run = Studies.Run
+  LEFT JOIN MLST ON Tips.TIP = MLST.TIP
+  LEFT JOIN ResistanceList ON Tips.TIP = ResistanceList.TIP
+  RIGHT JOIN GBS ON Tips.Run = GBS.Run
+WHERE Tips.TIP IS NOT NULL;
+UPDATE GBS_BROWSER
+  SET final_study = "Public"
+  WHERE final_study IS NULL AND
+        public = "Y";
+UPDATE GBS_BROWSER
+  SET final_study = "slchen"
+  WHERE final_study IS NULL;
