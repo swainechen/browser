@@ -12,22 +12,11 @@ use DBI;
 use Getopt::Long;
 &Getopt::Long::Configure("pass_through");
 
-# this needs to get set
-my $NOREF_DIR = ""
-
-my $sid = 'germs_browser';
-my $user;
-my $pass;
-my $host;
 my $quiet = 1;
 my $force_species = "NONE";
 my $force_reference = "NONE";
 GetOptions (
-  'sid|db=s' => \$sid,
   'quiet!' => \$quiet,
-  'user=s' => \$user,
-  'pass=s' => \$pass,
-  'host=s' => \$host,
   'species=s' => \$force_species,
   'reference=s' => \$force_reference
 );
@@ -49,7 +38,7 @@ my $directory = "";
 my $fullspecies = "";	# this is like "Escherichia coli"
 my $species = "";	# this is like "Ecoli"
 my $reference = "";
-my $dbh = GERMS::dbconnect($sid, $host, $user, $pass);
+my $dbh = GERMS::dbconnect("germs_browser");
 my $sql;
 my $sth;
 my $temp;
@@ -128,7 +117,7 @@ if (length $reference && -f $reference) {
   $directory = File::Basename::dirname($reference);
 } else {
   $reference = "NONE";
-  $directory = $NOREF_DIR;
+  $directory = "/home/slchen/Documents/Projects/Outbreaks/Others/Noref";
 }
 
 if (!defined $species || $species eq "") {
