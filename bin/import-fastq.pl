@@ -20,12 +20,6 @@ use File::Spec;
 use Getopt::Long;
 use GERMS;
 
-my $db_info = {
-  database => "",
-  host => "",
-  username => "",
-  password => ""
-};
 my $GET_FILES = "/mnt/software/bin/get_files.pl";
 my $RUN_KRAKEN = "/mnt/software/bin/run-kraken.pl";
 my $USE_DB = 0;
@@ -85,7 +79,7 @@ if (!defined $ARGV[0] || !length($ARGV[0])) {
 }
 # check for files
 my $runID = $ARGV[0];
-my $DBH = dbconnect($db_info->{database}, $db_info->{host}, $db_info->{username}, $db_info->{password});
+my $DBH = GERMS::dbconnect("germs_browser");
 my $DB_PARSER = DateTime::Format::DBI->new($DBH);
 my $TIP = GERMS::get_browser_tip($runID, $DBH, $USE_DB);
 if ($verbose) {
@@ -179,7 +173,7 @@ if (-f $files[0] && -s $files[0]) {
   }
 
   # check if there's already Kraken data
-  $sql = "SELECT Kraken, KrakenPercent FROM Fastq WHERE TIP = ?";
+  $sql = "SELECT Kraken, KrakenPercent, Kraken2, Kraken2Percent FROM Fastq WHERE TIP = ?";
   $sth = $DBH->prepare($sql);
   $sth->execute($fastq_data->{TIP});
   while (@f = $sth->fetchrow_array()) {
@@ -190,6 +184,12 @@ if (-f $files[0] && -s $files[0]) {
     if (defined $f[1] && length($f[1])) {
       $fastq_data->{KrakenPercent} = $f[1];
     }
+    if (defined $f[2] && length($f[2])) {
+      $fastq_data->{Kraken2} = $f[2];
+    }
+    if (defined $f[3] && length($f[3])) {
+      $fastq_data->{Kraken2Percent} = $f[3];
+    }
     last;
   }
   if (!defined $fastq_data->{Kraken} || $force) {
@@ -199,10 +199,18 @@ if (-f $files[0] && -s $files[0]) {
     }
     print "Running $kraken_command\n" if $verbose;
     $kraken_out = `$kraken_command`;
-    chomp $kraken_out;
-    @f = split /\t/, $kraken_out;
-    $fastq_data->{Kraken} = $f[0];
-    $fastq_data->{KrakenPercent} = $f[1];
+    @f = split /\n/, $kraken_out;
+    foreach $i (0..$#f) {
+      chomp $f[$i];
+      @g = split /\t/, $f[$i];
+      if ($i == 0) {
+        $fastq_data->{Kraken} = $g[0];
+        $fastq_data->{KrakenPercent} = $g[1];
+      } elsif ($i == 1) {
+        $fastq_data->{Kraken2} = $g[0];
+        $fastq_data->{Kraken2Percent} = $g[1];
+      }
+    }
   }
 
   # get Machine and Technology data
