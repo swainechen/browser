@@ -21,6 +21,7 @@ my $VERBOSE = 0;
 my $num_reads = 100000;
 my $seed = 11;
 my $current_dir;
+my $classification;
 
 GetOptions (
   'q1=s' => \$q1,
@@ -66,7 +67,18 @@ if ($q2 ne "") {
 }
 
 if ($q1 ne "" && -f $q1) {
-  print run_kraken($q1, $q2), "\n";
+  $classification = run_kraken($q1, $q2);
+  if (defined $classification->{Species}) {
+    print join ("\t", $classification->{Species}->{Classification}, $classification->{Species}->{Percent}), "\n";
+    if (defined $classification->{Species2}) {
+      print join ("\t", $classification->{Species2}->{Classification}, $classification->{Species2}->{Percent}), "\n";
+    }
+  } elsif (defined $classification->{Genus}) {
+    print join ("\t", $classification->{Genus}->{Classification}, $classification->{Genus}->{Percent}), "\n";
+    if (defined $classification->{Genus2}) {
+      print join ("\t", $classification->{Genus2}->{Classification}, $classification->{Genus2}->{Percent}), "\n";
+    }
+  }
 }
 
 chdir($current_dir);
@@ -90,13 +102,9 @@ sub run_kraken {
   my @f;
   my @g;
   my $i;
-  my $max;
-  my $backup_max;
   my $output;
+  my $parse = (); # keyed as level (G or S), line #, then Percent/Classification
   my $return;
-  my $return_index;
-  my $backup_return;
-  my $backup_return_index;
   my @ft = GERMS::file_type($q1);
 
   $command = "$KRAKEN_BIN --db $KRAKEN_DB";
@@ -141,44 +149,51 @@ sub run_kraken {
     $output = `$command`;
     print $output if $VERBOSE;
     @f = split /\n/, $output;
-    $max = 0;
-    $backup_max = 0;
-    $return = "";
-    $return_index = -1;
-    $backup_return = "";
-    $backup_return_index = -1;
     foreach $i (0..$#f) {
       $f[$i] =~ s/^\s+//;
       @g = split /\t/, $f[$i];
-      if ($g[3] eq "G") {
-        if ($g[0] > $backup_max) {
-          $backup_max = $g[0];
-          $backup_return = $g[5];
-          $backup_return =~ s/^\s+//;
-          $backup_return_index = $i;
-        }
-      }
-      if ($g[3] eq "S") {
-        if ($g[0] > $max) {
-          $max = $g[0];
-          $return = $g[5];
-          $return =~ s/^\s+//;
-          $return_index = $i;
-        }
+      if ($g[3] eq "G" || $g[3] eq "S") {
+        $g[5] =~ s/^\s+//;
+        $parse->{$g[3]}->{$i}->{Percent} = $g[0];
+        $parse->{$g[3]}->{$i}->{Classification} = $g[5];
       }
     }
     unlink($expected_file);
-    if ($return_index >= 0) {
-      print "Kraken classification line: $f[$return_index]\n" if $VERBOSE;
-      return("$return\t$max");
-    } elsif ($backup_return_index >= 0) {
-      print "Kraken classification line: $f[$backup_return_index]" if $VERBOSE;
-      return("$backup_return\t$backup_max");
+    if (defined $parse->{S}) {
+      @g = reverse sort 
+             { $parse->{S}->{$a}->{Percent} <=> $parse->{S}->{$b}->{Percent} }
+             keys %{$parse->{S}};
+      if (scalar(@g)) {
+        print "Kraken classification line: $f[$g[0]]\n" if $VERBOSE;
+        $return->{Species}->{Classification} = $parse->{S}->{$g[0]}->{Classification};
+        $return->{Species}->{Percent} = $parse->{S}->{$g[0]}->{Percent};
+        if ($#g >= 1) {
+          print "Kraken classification line: $f[$g[1]]\n" if $VERBOSE;
+          $return->{Species2}->{Classification} = $parse->{S}->{$g[1]}->{Classification};
+          $return->{Species2}->{Percent} = $parse->{S}->{$g[1]}->{Percent};
+        }
+      }
     }
+    if (defined $parse->{G}) {
+      @g = reverse sort
+             { $parse->{G}->{$a}->{Percent} <=> $parse->{G}->{$b}->{Percent} }
+             keys %{$parse->{G}};
+      if (scalar(@g)) {
+        print "Kraken classification line: $f[$g[0]]\n" if $VERBOSE;
+        $return->{Genus}->{Classification} = $parse->{G}->{$g[0]}->{Classification};
+        $return->{Genus}->{Percent} = $parse->{G}->{$g[0]}->{Percent};
+        if ($#g >= 1) {
+          print "Kraken classification line: $f[$g[1]]\n" if $VERBOSE;
+          $return->{Genus2}->{Classification} = $parse->{G}->{$g[1]}->{Classification};
+          $return->{Genus2}->{Percent} = $parse->{G}->{$g[1]}->{Percent};
+        }
+      }
+    }
+    return($return);
   } else {
     print "Couldn't find $expected_file file after initial Kraken run, skipping...\n" if $VERBOSE;
-    return("");
+    return(undef);
   }
-  return("");
+  return(undef);
 }
 
