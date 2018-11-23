@@ -22,7 +22,7 @@ if ($show_help || !defined $ARGV[0] || !length $ARGV[0]) {
   print "Usage: $0 <RunID> [ -quiet ]\n";
   print "Will print out information on this library\n";
   print "Can also give a TIP number but be careful about confusing with Run IDs that might be integers\n";
-  print "With -quiet will just give an indication of completeness:\n";
+  print "With -quiet will just give an indication of completeness, explanation on STDERR:\n";
   print "  Fully complete: No output, exit code 0\n";
   print "  No TIP: TIP, exit code 1\n";
   print "  No fastq data: FASTQ, exit code 2\n";
@@ -76,6 +76,12 @@ if (!defined $run || !defined $tip || !length $run || $tip <= 0) {
 # Fastq
 $r = get_all_from_table("Fastq", "TIP", $tip, "Technology");
 $output->{FASTQ} = $r;
+if (defined $output->{FASTQ}->{ILLUMINA}) {
+  if (!defined $output->{FASTQ}->{ILLUMINA}->{Kraken} ||
+      $output->{FASTQ}->{ILLUMINA}->{Kraken} eq "") {
+    $exit += 2;
+  }
+}
 
 # Files - this has more keys (TIP, Type, MD5)
 $sql = "SELECT * FROM Files WHERE TIP = ?";
@@ -87,11 +93,15 @@ while ($data = $sth->fetchrow_hashref) {
 $sth->finish;
 
 # SRST2 - Resistance and Genes
+my $error_srst2 = 0;
 $sql = "SELECT COUNT(*), SOURCE, SourceFileMD5 FROM Genes WHERE TIP = ? GROUP BY SOURCE, SourceFileMD5";
 $sth = $DBH->prepare($sql);
 $sth->execute($tip);
 while (@data = $sth->fetchrow_array()) {
   $output->{SRST2}->{Genes}->{$data[1]}->{$data[2]} = $data[0];
+}
+if ($sth->rows != 1) {
+  $error_srst2 = 1;
 }
 $sql = "SELECT COUNT(*), SOURCE, SourceFileMD5 FROM Resistance WHERE TIP = ? GROUP BY SOURCE, SourceFileMD5";
 $sth = $DBH->prepare($sql);
@@ -99,16 +109,29 @@ $sth->execute($tip);
 while (@data = $sth->fetchrow_array()) {
   $output->{SRST2}->{Resistance}->{$data[1]}->{$data[2]} = $data[0];
 }
+if ($sth->rows != 1) {
+  $error_srst2 = 1;
+}
 $sql = "SELECT MLSTDatabase, MLST, SOURCE, SourceFileMD5 FROM MLST WHERE TIP = ? GROUP BY SOURCE, SourceFileMD5";
 $sth = $DBH->prepare($sql);
 $sth->execute($tip);
 while (@data = $sth->fetchrow_array()) {
   $output->{SRST2}->{MLST}->{$data[2]}->{$data[3]} = "$data[1] ($data[0])";
 }
+if ($sth->rows != 1) {
+  $error_srst2 = 1;
+}
+$exit += 8 if $error_srst2;
 
 # Assembly
 $r = get_all_from_table("Assembly", "TIP", $tip, "assembly");
 $output->{ASSEMBLY} = $r;
+foreach $i (keys %{$output->{ASSEMBLY}}) {
+  next if $i eq "assembly";
+  if (!defined $output->{ASSEMBLY}->{$i}->{N50}) {
+    $exit += 16;
+  }
+}
 
 # metadata
 $r = get_all_from_table("Studies", "Run", $run, "Run");
@@ -158,15 +181,21 @@ if (!$quiet) {
   print "FASTQ:\n";
   $r = $output->{FASTQ};
   foreach $i (keys %{$r}) {
+    next if $i eq "Technology";
     print "  Technology: $i\n";
-    print "  $r->{$i}->{NumReads} ";
+    print "  $r->{$i}->{NumReads} " if defined $r->{$i}->{NumReads};
     if (uc($r->{$i}->{Paired}) eq 'YES') {
       print "paired reads ";
     } else {
       print "unpaired reads ";
     }
-    print "of length $r->{$i}->{ReadLength}\n";
-    print "  Classified as $r->{$i}->{Kraken} ($r->{$i}->{KrakenPercent}\%)\n";
+    print "of length $r->{$i}->{ReadLength}\n" if defined $r->{$i}->{ReadLength};
+    if (defined $r->{$i}->{Kraken}) {
+      print "  Classified as $r->{$i}->{Kraken} ($r->{$i}->{KrakenPercent}\%)\n";
+    }
+    if (defined $r->{$i}->{Kraken2}) {
+      print "  Secondary classification $r->{$i}->{Kraken2} ($r->{$i}->{Kraken2Percent}\%)\n";
+    }
   }
   print "Files:\n";
   if (defined $output->{FILES}) {
@@ -230,6 +259,27 @@ if (!$quiet) {
       }
     }
   }
+}
+my $explain = $exit;
+if ($explain >= 16) {
+  $explain -= 16;
+  print STDERR "Some problem with Assembly\n";
+}
+if ($explain >= 8) {
+  $explain -= 8;
+  print STDERR "Some problem with SRST2\n";
+}
+if ($explain >= 4) {
+  $explain -= 4;
+  print STDERR "Some problem with Treefiles\n";
+}
+if ($explain >= 2) {
+  $explain -= 2;
+  print STDERR "Some problem with Fastq\n";
+}
+if ($explain >= 1) {
+  $explain -= 1;
+  print STDERR "Some problem with Tip\n";
 }
 exit($exit);
 
