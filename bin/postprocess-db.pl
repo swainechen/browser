@@ -19,12 +19,6 @@ use File::Spec;
 use Getopt::Long;
 use GERMS;
 
-my $db_info = {
-  database => "",
-  host => "",
-  username => "",
-  password => ""
-};
 my $USE_DB = 0;
 my $verbose = 0;
 my $MLSTDatabase = "";
@@ -149,7 +143,7 @@ if ($verbose) {
   print "Found these files:\n";
 }
 my $files_data;
-my $DBH = dbconnect($db_info->{database}, $db_info->{host}, $db_info->{username}, $db_info->{password});
+my $DBH = GERMS::dbconnect("germs_browser");
 my $DB_PARSER = DateTime::Format::DBI->new($DBH);
 my $TIP = GERMS::get_browser_tip($runID, $DBH, $USE_DB);
 $inputs->{TIP} = $TIP;
@@ -376,8 +370,9 @@ if (defined $inputs->{'tgz'}) {
       } elsif ($s[$i] =~ /== Final Summary ==/) {
         $i++;
         while ($i <= $#s) {
-          if ($s[$i] =~ /Number of paired.*: (\d+)/) {
-            $assembly_data->{num_reads} = $1;
+          if ($s[$i] =~ /Number of .*-end reads: (\d.*)$/) {
+            # sometimes get large numbers in scientific notation - add 0 to fix
+            $assembly_data->{num_reads} = $1 + 0;
           } elsif ($s[$i] =~ /Read length .*: (\d+)/) {
             $assembly_data->{read_length} = $1;
           } elsif ($s[$i] =~ /Assembly: (.*)/) {
