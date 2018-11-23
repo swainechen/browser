@@ -23,12 +23,6 @@ use File::Copy;
 use Getopt::Long;
 use GERMS;
 
-my $db_info = {
-  database => "",
-  host => "",
-  username => "",
-  password => ""
-};
 my $show_help = 0;
 my $USE_DB = 0;
 my $verbose = 0;
@@ -170,7 +164,7 @@ foreach $name (keys %$sequence) {
   }
 }
 
-my $DBH = dbconnect($db_info->{database}, $db_info->{host}, $db_info->{username}, $db_info->{password});
+my $DBH = GERMS::dbconnect("germs_browser");
 
 # need to manually handle default
 if ($data->{DefaultReference} && $USE_DB) {

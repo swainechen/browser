@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #
 # take tab delimited text file
-# expected columns based on Studies table
+# expected "/home/slchen/rdrive/ID/ID3/Swaine/Chen lab sequencing libraries.txt"
 # check for changes and do updates
 # database should be germs_browser
 # table should be Studies
@@ -19,19 +19,11 @@ use File::Spec;
 use Getopt::Long;
 use GERMS;
 
-# This needs to get set
-my $libraries_file = "";
-
-my $db_info = {
-  database => "",
-  host => "",
-  username => "",
-  password => ""
-};
 my $show_help = 0;
 my $USE_DB = 0;
 my $verbose = 0;
 my $force = 0;	# update no matter what - ignore date stamps
+my $libraries_file = "/home/slchen/rdrive/ID/ID3/Swaine/Chen lab sequencing libraries.txt";
 
 &Getopt::Long::Configure("pass_through");
 GetOptions (
@@ -79,7 +71,7 @@ if ($show_help || !-f $libraries_file) {
   exit;
 }
 
-my $DBH = dbconnect($db_info->{database}, $db_info->{host}, $db_info->{username}, $db_info->{password});
+my $DBH = GERMS::dbconnect("germs_browser");
 
 # we are expecting these columns:
 #   Run VARCHAR(255) NOT NULL,
