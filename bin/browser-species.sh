@@ -37,7 +37,7 @@ aquilaln1|aquilaln2)
     # we generally should have a species set
     # if we don't have a reference that will come out as NONE
     # this is when we want to do the no reference version
-    $QSUB -pe OpenMP $THREADS -l mem_free=$MEM,h_rt=$TIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN "$SNAKE -d $WORK -s $SNPSNAKE $RUN_TARGETS -p -j $THREADS --ri --configfile $CONF --config ACC=$RUN REF=$REF SPECIES=$SPECIES FULLSPECIES=\"$FULLSPECIES\" 2>> $RUN.log && qrls $RUN-stage3" 2>> $RUN.log
+    $QSUB -pe OpenMP $THREADS -l mem_free=$MEM,h_rt=$TIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN "$SNAKE -d $WORK -s $SNPSNAKE $RUN_TARGETS -p -j $THREADS --ri --configfile $CONF --config ACC=$RUN REF=$REF SPECIES=$SPECIES FULLSPECIES=\"$FULLSPECIES\" 2>> $RUN.log && qrls $RUN-stage3"
     # we need to hold the cleanup for this new job
   fi
 ;;
@@ -45,7 +45,7 @@ aquilaln1|aquilaln2)
   if ssh aquila "$QSTAT -j $RUN >& /dev/null"; then
     true
   else
-    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP $THREADS -l mem_free=$MEM,h_rt=$TIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN \"$SNAKE -d $WORK -s $SNPSNAKE $RUN_TARGETS -p -j $THREADS --ri --configfile $CONF --config ACC=$RUN REF=$REF SPECIES=$SPECIES FULLSPECIES=\"\\\"$FULLSPECIES\\\"\" 2>> $RUN.log && qrls $RUN-stage3\"" 2>> $RUN.log
+    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP $THREADS -l mem_free=$MEM,h_rt=$TIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN \"$SNAKE -d $WORK -s $SNPSNAKE $RUN_TARGETS -p -j $THREADS --ri --configfile $CONF --config ACC=$RUN REF=$REF SPECIES=$SPECIES FULLSPECIES=\"\\\"$FULLSPECIES\\\"\" 2>> $RUN.log && qrls $RUN-stage3\""
   fi
 ;;
 esac

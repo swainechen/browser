@@ -17,14 +17,13 @@ aquilaln1|aquilaln2)
   else
     cd $STAGING
     # we should also really check for completion first here before doing this
-    $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage1 "$SNAKE -s $FQSNAKE fastq -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log" 2>> $RUN.log
+    $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage1 "$SNAKE -s $FQSNAKE fastq -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log"
     # this next command starts a job with name $RUN
-    $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage2 -hold_jid $RUN-stage1 "$BROWSER_BASE/bin/browser-species.sh $RUN" 2>> $RUN.log
+    $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage2 -hold_jid $RUN-stage1 "$BROWSER_BASE/bin/browser-species.sh $RUN 2>> $RUN.log"
     # this needs better checking for completion - we wait first on $RUN
     # but $RUN doesn't start til the other job does as well
     # the other hold will have to get set by qalter in browser-species.sh
-    $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage3 -hold_jid $RUN-stage2 "tail -n 1 $RUN.log | grep -q 100...done && $SNAKE -s $FQSNAKE cleanup -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log" 2>> $RUN.log
-    qhold $RUN-stage3
+    $QSUB -h -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage3 -hold_jid $RUN-stage2 "tail -n 1 $RUN.log | grep -q 100...done && $SNAKE -s $FQSNAKE cleanup -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log"
   fi
 ;;
 *)
@@ -33,8 +32,7 @@ aquilaln1|aquilaln2)
   else
     ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage1 \"$SNAKE -s $FQSNAKE fastq -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log\"" 2>> $RUN.log
     ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage2 -hold_jid $RUN-stage1 \"$BROWSER_BASE/bin/browser-species.sh $RUN\"" 2>> $RUN.log
-    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage3 -hold_jid $RUN \"tail -n 1 $RUN.log | grep -q 100...done && $SNAKE -s $FQSNAKE cleanup -p -j 1 --ri --configfile $CONF --config ACC=$RUN -p 2>> $RUN.log\"" 2>> $RUN.log
-    ssh aquila "qhold $RUN-stage3"
+    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -h -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage3 -hold_jid $RUN \"tail -n 1 $RUN.log | grep -q 100...done && $SNAKE -s $FQSNAKE cleanup -p -j 1 --ri --configfile $CONF --config ACC=$RUN -p 2>> $RUN.log\"" 2>> $RUN.log
   fi
 ;;
 esac
