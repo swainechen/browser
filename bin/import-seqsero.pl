@@ -3,7 +3,7 @@
 # source file is a Seqsero_result.txt file
 # check for changes and do updates
 # database should be germs_browser
-# table should be SALMONELLA_Serotype
+# table should be SENTERICA_Serotype
 #
 use lib '/home/slchen/bin';
 use warnings;
@@ -67,7 +67,7 @@ my $Serotype;
 
 sub print_usage {
   print "Usage: $0 <Seqsero_result.txt file> [ -run <RunID> ] [ -db ] [ -verbose ] [ -force ]\n";
-  print "  Will import/update the data to the SALMONELLA_Serotype table.\n";
+  print "  Will import/update the data to the SENTERICA_Serotype table.\n";
   print "  With -db do database import / update (default just show what would be done)\n";
   print "  With -force then always update\n";
   print "  With -verbose print out all the information collected\n";
@@ -167,7 +167,7 @@ if ($verbose) {
   }
 }
 
-$status = GERMS::do_db($data, "SALMONELLA_Serotype", $force, $DBH, $USE_DB);
+$status = GERMS::do_db($data, "SENTERICA_Serotype", $force, $DBH, $USE_DB);
 if ($verbose) {
   foreach $i (sort keys %$data) {
     print "  $i: $data->{$i}\n";
