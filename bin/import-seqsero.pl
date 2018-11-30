@@ -138,12 +138,24 @@ my $DB_PARSER = DateTime::Format::DBI->new($DBH);
 my $TIP = GERMS::get_browser_tip($runID, $DBH, $USE_DB);
 
 $data->{TIP} = $TIP;
-$data->{OAntigen} = $Oag;
-$data->{H1} = $H1;
-$data->{H2} = $H2;
-$data->{AntigenicProfile} = $AgProfile;
-$data->{Sdf} = $Sdf;
-$data->{Serotype} = $Serotype;
+if (defined $Oag) {
+  $data->{OAntigen} = $Oag;
+}
+if (defined $H1) {
+  $data->{H1} = $H1;
+}
+if (defined $H2) {
+  $data->{H2} = $H2;
+}
+if (defined $AgProfile) {
+  $data->{AntigenicProfile} = $AgProfile;
+}
+if (defined $Sdf) {
+  $data->{Sdf} = $Sdf;
+}
+if (defined $Serotype) {
+  $data->{Serotype} = $Serotype;
+}
 
 if ($verbose) {
   print "RunID: $runID\n";
