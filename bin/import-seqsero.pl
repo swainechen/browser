@@ -4,6 +4,7 @@
 # check for changes and do updates
 # database should be germs_browser
 # table should be SENTERICA_Serotype
+# note as a metadata table this is assumed to be keyed on Run and not TIP
 #
 use lib '/home/slchen/bin';
 use warnings;
@@ -138,6 +139,7 @@ my $DB_PARSER = DateTime::Format::DBI->new($DBH);
 my $TIP = GERMS::get_browser_tip($runID, $DBH, $USE_DB);
 
 $data->{TIP} = $TIP;
+$data->{Run} = $runID;
 if (defined $Oag) {
   $data->{OAntigen} = $Oag;
 }
