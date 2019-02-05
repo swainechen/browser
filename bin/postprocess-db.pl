@@ -114,7 +114,7 @@ sub print_usage {
   print "  With -verbose print out all the information collected\n";
   print "  With -s3 push files to S3, configuration hardcoded for now in the script\n";
   print "  With -delete then delete files after processing (probably only use with -s3)\n";
-  print "  -reference specifies the reference .fna file used if not using the default - this needs to be in the ReferenceGenome table";
+  print "  -reference specifies the reference .fna file used if not using the default - this needs to be in the ReferenceGenome table\n";
   if ($MLSTDatabase eq "") {
     print "ERROR: No -mlst_database specified\n";
   }
