@@ -16,8 +16,15 @@ use DateTime::Format::DBI;
 use DateTime::Format::DateParse;
 use Data::Dumper;
 use File::Spec;
+use File::Basename;
 use Getopt::Long;
 use GERMS;
+
+my $S3_BUCKET = "s3://slchen-lab-outbreaks";
+my $S3_SPECIES = "";
+my $S3_REFDIR = "";
+my $S3_PROFILE = "default";
+my $S3_OP = "cp";
 
 my $USE_DB = 0;
 my $verbose = 0;
@@ -25,6 +32,9 @@ my $MLSTDatabase = "";
 my $SOURCE = "";
 my $force = "";	# update no matter what - ignore date stamps
 my @data_dirs = ();
+my $push_s3 = 1;
+my $delete = 0;
+my $reference_fna = "";
 &Getopt::Long::Configure("pass_through");
 GetOptions (
   'mlst_database=s' => \$MLSTDatabase,
@@ -32,7 +42,10 @@ GetOptions (
   'db!' => \$USE_DB,
   'verbose!' => \$verbose,
   'force=s' => \$force,
-  'data_dir=s' => \@data_dirs
+  'data_dir=s' => \@data_dirs,
+  's3!' => \$push_s3,
+  'delete!' => \$delete,
+  'reference=s' => $reference_fna
 );
 
 push @data_dirs, ".";
@@ -60,6 +73,7 @@ my $mlst_data;
 my $resistance_data;
 my $genes_data;
 my $status;
+my $s3_object;
 my @order = qw(
   AGly
   Bla
@@ -90,7 +104,7 @@ my $classes = {
 };
 
 sub print_usage {
-  print "Usage: $0 <Run ID> -mlst_database <organism> -source <source> [ -data <dir> [ -data <dir> [ ... ] ] ] [ -db ] [ -verbose ] [ -force <table> ]\n";
+  print "Usage: $0 <Run ID> -mlst_database <organism> -source <source> [ -data <dir> [ -data <dir> [ ... ] ] ] [ -db ] [ -verbose ] [ -force <table> ] [ -s3|nos3 ] [ -delete|nodelete ] [ -reference <reference fna> ]\n";
   print "  Multiple -data_dir options can be specified and will look through all of those\n";
   print "  Need to specify MLST database because it's not present in the srst2.gz file\n";
   print "  Also need to specify the source - this should be FASTQ or ASSEMBLY\n";
@@ -98,6 +112,9 @@ sub print_usage {
   print "  With -force <table> then always update that table\n";
   print "    Choices are: All, Tips, Files, Fastq, MLST, Resistance, Genes, Assembly\n";
   print "  With -verbose print out all the information collected\n";
+  print "  With -s3 push files to S3, configuration hardcoded for now in the script\n";
+  print "  With -delete then delete files after processing (probably only use with -s3)\n";
+  print "  -reference specifies the reference .fna file used if not using the default - this needs to be in the ReferenceGenome table";
   if ($MLSTDatabase eq "") {
     print "ERROR: No -mlst_database specified\n";
   }
@@ -112,7 +129,9 @@ if (!defined $ARGV[0] || !length($ARGV[0]) || $MLSTDatabase eq "" || $SOURCE eq 
 }
 # check for files
 my $runID = $ARGV[0];
-my @extensions = qw(lofreq.gz gcov.gz srst2.gz tgz);
+# don't store lofreq.gz.tbi because it's usually fast to calculate
+# but gcov.png takes a while to calculate
+my @extensions = qw(lofreq.gz gcov.gz gcov.png srst2.gz tgz);
 my $inputs = ();
 my $dates = ();
 my $dir;
@@ -420,3 +439,57 @@ if (defined $inputs->{'tgz'}) {
   $status = GERMS::do_db_withSourceFile($assembly_data, "Assembly", $force, $DBH, $USE_DB);
   print "  Assembly: $status\n" if $verbose;
 } # Assembly
+
+if ($push_s3) {
+  if ($delete) {
+    $S3_OP = "mv";
+  } else {
+    $S3_OP = "cp";
+  }
+  # get all the info
+  if ($reference_fna ne "") {
+    $reference_fna = File::Basename::basename($reference_fna);
+  }
+  if ($reference_fna ne "") {
+    $sql = "SELECT ReferenceFile, DefaultReference FROM ReferenceGenomes WHERE Species = ?";
+  } else {
+    $sql = "SELECT ReferenceFile, DefaultReference FROM ReferenceGenomes WHERE DefaultReference = 1 AND Species = ?";
+  }
+  my $sth = $DBH->prepare($sql);
+  $S3_SPECIES = $MLSTDatabase;
+  $sth->execute($MLSTDatabase);
+  while (@f = $sth->fetchrow_array) {
+    if ($reference_fna eq File::Basename::basename($f[0]) ||
+         ($reference_fna eq "" && $f[1] == 1)) {
+      @g = split /\//, File::Basename::dirname($f[0]);
+      $S3_REFDIR = pop @g;
+    }
+  }
+  if (length($S3_REFDIR)) {
+    # check for existence, if not then upload
+    foreach $ext (keys %$inputs) {
+      next if $ext =~ /_MD5$/;
+      next if $ext eq "TIP";
+      if (defined $inputs->{$ext . "_MD5"}) {
+        $i = "--metadata MD5sum=" . $inputs->{$ext . "_MD5"};
+      } else {
+        $i = "";
+      }
+      $s3_object = "$S3_BUCKET/$S3_SPECIES/$S3_REFDIR/" . File::Basename::basename($inputs->{$ext});
+      $j = `aws s3 ls $s3_object`;
+      if ($? != 0) {
+        $j = `aws s3 $S3_OP $inputs->{$ext} $S3_BUCKET/$S3_SPECIES/$S3_REFDIR/ $i`;
+        if ($? != 0) {
+          print STDERR "error on S3 $S3_OP on $inputs->{$ext}\n";
+        } else {
+          # modify the file path in Files table
+          $sql = "UPDATE Files SET Filename = ? WHERE Filename = ? AND MD5 = ?";
+          if ($USE_DB) {
+            $sth = $DBH->prepare($sql);
+            $sth->execute($s3_object, $inputs->{$ext}, $inputs->{$ext . "_MD5"});
+          }
+        }
+      }
+    }
+  }
+}
