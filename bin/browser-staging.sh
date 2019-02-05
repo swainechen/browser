@@ -30,9 +30,9 @@ aquilaln1|aquilaln2)
   if ssh aquila "$QSTAT -j $RUN >& /dev/null" || ssh aquila "$QSTAT -j $RUN-* >& /dev/null"; then
     true
   else
-    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage1 \"$SNAKE -s $FQSNAKE fastq -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log\"" 2>> $RUN.log
-    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage2 -hold_jid $RUN-stage1 \"$BROWSER_BASE/bin/browser-species.sh $RUN\"" 2>> $RUN.log
-    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -h -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage3 -hold_jid $RUN \"tail -n 1 $RUN.log | grep -q 100...done && $SNAKE -s $FQSNAKE cleanup -p -j 1 --ri --configfile $CONF --config ACC=$RUN -p 2>> $RUN.log\"" 2>> $RUN.log
+    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage1 \"$SNAKE -s $FQSNAKE fastq -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log\""
+    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage2 -hold_jid $RUN-stage1 \"$BROWSER_BASE/bin/browser-species.sh $RUN\""
+    ssh aquila "export GERMS_DATA=$GERMS_DATA && cd $STAGING && $QSUB -h -pe OpenMP 1 -l mem_free=$FMEM,h_rt=$FTIME -cwd -V -b y -o /dev/null -e /dev/null -N $RUN-stage3 -hold_jid $RUN \"tail -n 1 $RUN.log | grep -q 100...done && $SNAKE -s $FQSNAKE cleanup -p -j 1 --ri --configfile $CONF --config ACC=$RUN -p 2>> $RUN.log\""
   fi
 ;;
 esac
