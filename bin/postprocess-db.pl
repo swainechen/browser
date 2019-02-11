@@ -18,13 +18,16 @@ use Data::Dumper;
 use File::Spec;
 use File::Basename;
 use Getopt::Long;
+use JSON;
 use GERMS;
 
-my $S3_BUCKET = "s3://slchen-lab-outbreaks";
+my $S3_BUCKET = "slchen-lab-outbreaks";
 my $S3_SPECIES = "";
 my $S3_REFDIR = "";
 my $S3_PROFILE = "default";
 my $S3_OP = "cp";
+my $OUTBREAK_BASE = $ENV{"OUTBREAK_BASE"};
+$OUTBREAK_BASE =~ s/\/$//;
 
 my $USE_DB = 0;
 my $verbose = 0;
@@ -74,6 +77,10 @@ my $resistance_data;
 my $genes_data;
 my $status;
 my $s3_object;
+my $s3_date;
+my $s3_MD5;
+my $s3_temp;
+my $s3_command;
 my @order = qw(
   AGly
   Bla
@@ -181,6 +188,7 @@ foreach $ext (@extensions) {
     $files_data->{TIP} = $TIP;
     $files_data->{Type} = $ext;
     $files_data->{Filename} = $inputs->{$ext};
+    $files_data->{Filename} =~ s/^$OUTBREAK_BASE\///;
     $files_data->{MD5} = $inputs->{$ext . "_MD5"};
     $files_data->{DateStamp} = $dates->{$ext};
     $status = GERMS::do_db_withSourceFile($files_data, "Files", $force, $DBH, $USE_DB);
@@ -466,7 +474,7 @@ if ($push_s3) {
     }
   }
   if (length($S3_REFDIR)) {
-    # check for existence, if not then upload
+    # check for existence, timestamp, MD5 if present to decide on upload
     foreach $ext (keys %$inputs) {
       next if $ext =~ /_MD5$/;
       next if $ext eq "TIP";
@@ -475,18 +483,37 @@ if ($push_s3) {
       } else {
         $i = "";
       }
-      $s3_object = "$S3_BUCKET/$S3_SPECIES/$S3_REFDIR/" . File::Basename::basename($inputs->{$ext});
-      $j = `aws s3 ls $s3_object`;
-      if ($? != 0) {
-        $j = `aws s3 $S3_OP $inputs->{$ext} $S3_BUCKET/$S3_SPECIES/$S3_REFDIR/ $i`;
-        if ($? != 0) {
-          print STDERR "error on S3 $S3_OP on $inputs->{$ext}\n";
+      $s3_object = "s3://$S3_BUCKET/$S3_SPECIES/$S3_REFDIR/" . File::Basename::basename($inputs->{$ext});
+      $s3_command = "aws s3 ls $s3_object";
+      $j = `$s3_command`;
+      if ($? == 0) {
+        $s3_temp = "$S3_SPECIES/$S3_REFDIR/" . File::Basename::basename($inputs->{$ext});
+        $s3_command = "aws s3api head-object --bucket $S3_BUCKET --key $s3_temp";
+        $j = `$s3_command`;
+        $j = JSON::decode_json($j);
+        if (defined $j->{LastModified}) {
+          $s3_date = DateTime::Format::DateParse->parse_datetime($j->{LastModified});
+        }
+        if (defined $j->{Metadata}->{md5sum}) {
+          $s3_MD5 = $j->{Metadata}->{md5sum};
+        }
+      }
+      if ($force eq "S3" ||
+           ( (!defined($s3_MD5) || $s3_MD5 ne $inputs->{$ext . "_MD5"}) &&
+             (!defined($s3_date) || ($s3_date < $dates->{$ext}) ) )
+         ) {
+        $s3_command = "aws s3 $S3_OP $inputs->{$ext} s3://$S3_BUCKET/$S3_SPECIES/$S3_REFDIR/ $i";
+        if ($USE_DB) {
+          if ($verbose) {
+            print "Running: $s3_command\n";
+          }
+          $j = `$s3_command`;
+          if ($? != 0) {
+            print STDERR "error on S3 $S3_OP on $inputs->{$ext}\n";
+          }
         } else {
-          # modify the file path in Files table
-          $sql = "UPDATE Files SET Filename = ? WHERE Filename = ? AND MD5 = ?";
-          if ($USE_DB) {
-            $sth = $DBH->prepare($sql);
-            $sth->execute($s3_object, $inputs->{$ext}, $inputs->{$ext . "_MD5"});
+          if ($verbose) {
+            print "Would run: $s3_command\n";
           }
         }
       }
