@@ -6,7 +6,6 @@
 # database should be germs_browser
 # table should be ReferenceGenomes
 #
-use lib '/home/slchen/bin';
 use warnings;
 use strict;
 use slchen;
@@ -30,6 +29,7 @@ my $download = 0;
 my $species = "";
 my $set_default = 0;
 my $force = 0;	# update no matter what - ignore date stamps
+my $OUTBREAK_BASE = $ENV{'OUTBREAK_BASE'}
 
 &Getopt::Long::Configure("pass_through");
 GetOptions (
@@ -83,6 +83,11 @@ if ($show_help || $species eq "") {
 }
 if (!defined $ARGV[0] || (!$download && !-f $ARGV[0])) {
   &print_usage;
+  exit;
+}
+if (!defined $OUTBREAK_BASE || !-d $OUTBREAK_BASE) {
+  &print_usage;
+  print "\n-- Error, OUTBREAK_BASE not set or doesn't exist\n";
   exit;
 }
 
@@ -175,6 +180,10 @@ if ($data->{DefaultReference} && $USE_DB) {
   $sth = $DBH->prepare($sql);
   $sth->execute($data->{Species});
 }
+
+# mangle the paths to eliminate $OUTBREAK_BASE in front
+$data->{ReferenceFile} =~ s/^$OUTBREAK_BASE\///;
+$data->{GFFFile} =~ s/^$OUTBREAK_BASE\///;
 
 # do the database checking and inserting/updating
 $status->{GERMS::do_db($data, "ReferenceGenomes", $force, $DBH, $USE_DB)}++;

@@ -15,13 +15,14 @@ use Getopt::Long;
 my $quiet = 1;
 my $force_species = "NONE";
 my $force_reference = "NONE";
+my $OUTBREAK_BASE = $ENV{'OUTBREAK_BASE'};
 GetOptions (
   'quiet!' => \$quiet,
   'species=s' => \$force_species,
   'reference=s' => \$force_reference
 );
 
-if (!defined $ARGV[0] || !length($ARGV[0])) {
+if (!defined $ARGV[0] || !length($ARGV[0]) || !defined $OUTBREAK_BASE || -f $OUTBREAK_BASE) {
   print "Usage: $0 <Run ID> [ -species <species> ] [ -reference <reference> ]\n";
   print "Will print out:\n";
   print "  Directory for rest of files\n";
@@ -29,6 +30,9 @@ if (!defined $ARGV[0] || !length($ARGV[0])) {
   print "  Reference sequence for mapping\n";
   print "Can force Species, use \"Ecoli\" or \"Escherichia coli\" (quoted as needed)\n";
   print "Can force Reference, use Reference filename, Reference md5sum, Reference genome name (like \"EC958\" or \"LT2\")\n";
+  if (!defined $OUTBREAK_BASE || -f $OUTBREAK_BASE) {
+    print "-- Error, OUTBREAK_BASE environment variable not set\n";
+  }
   exit;
 }
 
@@ -91,7 +95,11 @@ if (uc($force_reference) eq "NONE") {
   $sth->execute($species);
   while (@data = $sth->fetchrow_array()) {
   if (length $data[0]) {
-      $reference = File::Spec->rel2abs($data[0]);
+      if (-f $data[0]) {
+        $reference = File::Spec->rel2abs($data[0]);
+      } elsif (-f "$OUTBREAK_BASE/$data[0]") {
+        $reference = File::Spec->rel2abs("$OUTBREAK_BASE/$data[0]");
+      }
       last;
     }
   }
@@ -117,7 +125,7 @@ if (length $reference && -f $reference) {
   $directory = File::Basename::dirname($reference);
 } else {
   $reference = "NONE";
-  $directory = "/home/slchen/Documents/Projects/Outbreaks/Others/Noref";
+  $directory = "$OUTBREAK_BASE/Others/Noref";
 }
 
 if (!defined $species || $species eq "") {
