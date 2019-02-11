@@ -6,7 +6,6 @@
 # .lofreq.gz - not really needed here
 # .tgz - info for Fastq and Assembly
 #
-use lib '/home/slchen/bin';
 use warnings;
 use strict;
 use slchen;
@@ -20,8 +19,8 @@ use File::Spec;
 use Getopt::Long;
 use GERMS;
 
-my $GET_FILES = "/mnt/software/bin/get_files.pl";
-my $RUN_KRAKEN = "/mnt/software/bin/run-kraken.pl";
+my $GET_FILES = `which get_files.pl`; chomp $GET_FILES;
+my $RUN_KRAKEN = `which run-kraken.pl`; chomp $RUN_KRAKEN;
 my $USE_DB = 0;
 my $verbose = 0;
 my $force = 0;	# update no matter what - ignore date stamps
