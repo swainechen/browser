@@ -23,7 +23,7 @@ rule final:
 #        lacer=config['ACC'] + ".lacer",
 #        lacerdump=config['ACC'] + ".lacer.dump.gz"
     shell:
-        "{config[DB_POST]} -mlst_database {config[SPECIES]} -source FASTQ {config[ACC]} -db;"
+        "{config[DB_POST]} -mlst_database {config[SPECIES]} -source FASTQ {config[ACC]} -db -s3 -delete;"
 
 
 rule noref_final:
@@ -31,7 +31,7 @@ rule noref_final:
         tgz=config['ACC'] + ".tgz",
         srst2=config['ACC'] + ".srst2.gz"
     shell:
-        "{config[DB_POST]} -mlst_database {config[SPECIES]} -source FASTQ {config[ACC]} -db;"
+        "{config[DB_POST]} -mlst_database {config[SPECIES]} -source FASTQ {config[ACC]} -db -s3 -delete;"
 
 
 rule treefiles:
@@ -81,9 +81,7 @@ rule srst2:
         2
     shell:
         "set +u; "
-        "source activate srst2; "
         "{config[SRST2WRAP]} -name {config[ACC]} -q1 `{config[GETFILES]} {config[ACC]} -delimiter \" -q2 \"` -species {config[SPECIES]} | gzip > {output.srst2_file}; "
-        "source deactivate; "
         "set -u; "
         "{config[VFFASTA]} {output.srst2_file} > {output.vffasta};"
 
