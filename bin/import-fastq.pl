@@ -21,6 +21,8 @@ use GERMS;
 
 my $GET_FILES = `which get_files.pl`; chomp $GET_FILES;
 my $RUN_KRAKEN = `which run-kraken.pl`; chomp $RUN_KRAKEN;
+my $SRADB = "/mnt/volume1/fastq/SRAmetadb.sqlite";
+my %ATTR;	# needed for SQLite connection - ?
 my $USE_DB = 0;
 my $verbose = 0;
 my $force = 0;	# update no matter what - ignore date stamps
@@ -48,8 +50,6 @@ my $param_number;
 my $param_map;
 my @return;
 my $operation;
-my $SRADB = "/mnt/genomeDB/ncbi/sra/SRAmetadb.sqlite";
-my %ATTR;	# needed for SQLite connection - ?
 my $fastq_data;
 my $mlst_data;
 my $resistance_data;
