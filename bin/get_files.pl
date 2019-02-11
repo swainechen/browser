@@ -141,7 +141,7 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   if (scalar @out) {
     print join ($delimiter, @out), "\n";
   }
-} elsif ($ARGV[0] =~ /[DWR][A-Z][A-Z]\d\d\d+/) {
+} elsif ($ARGV[0] =~ /[DMWR][A-Z][A-Z]\d\d\d+/) {
   $command = "mkdir -p $dir/$ARGV[0]; cd $dir/$ARGV[0]; aws --profile $S3_PROFILE s3 sync $S3_BASE/$ARGV[0]/ . > /dev/null 2>&1";
   if ($debug) {
     print STDERR "Trying to get GIS style files from S3. Running command:\n";
