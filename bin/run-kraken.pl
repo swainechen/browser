@@ -10,10 +10,10 @@ use GERMS;
 use Getopt::Long;
 &Getopt::Long::Configure("pass_through");
 
-my $KRAKEN_BIN = "/mnt/software/stow/kraken-0.10.5-beta/bin/kraken";
-my $KRAKEN_REPORT = "/mnt/software/stow/kraken-0.10.5-beta/bin/kraken-report";
-my $KRAKEN_DB = "/mnt/genomeDB/misc/softwareDB/kraken/minikraken_20141208";
-my $SEQTK = "/mnt/software/stow/seqtk-1.0/bin/seqtk";
+my $KRAKEN_BIN = `which kraken`; chomp $KRAKEN_BIN;
+my $KRAKEN_REPORT = `which kraken-report`; chomp $KRAKEN_REPORT;
+my $KRAKEN_DB = "/usr/local/lib/kraken/minikraken_20171019_8GB";
+my $SEQTK = `which seqtk`; chomp $SEQTK;
 my $q1 = "";
 my $q2 = "";
 my $show_help = 0;
