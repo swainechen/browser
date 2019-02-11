@@ -30,6 +30,8 @@ CREATE TABLE Fastq (
   ReadLength INT NOT NULL,
   Kraken VARCHAR(255),
   KrakenPercent FLOAT,
+  Kraken2 VARCHAR(255),
+  Kraken2Percent FLOAT,
   KEY (TIP, Technology),
   FOREIGN KEY (TIP) REFERENCES Tips (TIP)
 ) ENGINE = INNODB;
