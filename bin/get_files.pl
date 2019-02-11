@@ -281,6 +281,9 @@ sub q12 {
           # iSeq is WEB2675-TGCTACAT_S1_L001_R1_001_IS001-PE-R00002.fastq.gz
           $file =~ /_R[12]_\d+_\w+\d+-[PS]E-R\d+.fastq$/ ||
           $file =~ /_R[12]_\d+_\w+\d+-[PS]E-R\d+.fastq.gz$/ ||
+          # can also see WEB4055_HS008-PE-R00136_L004_R1_unaligned_001.fastq.gz
+          $file =~ /_R[12]_unaligned_\d+.fastq.gz$/ ||
+
           # SRA from Genbank
           $file =~ /_[12]\.fq$/      || $file =~ /_[12]\.fq.gz$/
          ) {
@@ -345,6 +348,7 @@ sub combine {
       if ($files[$i] =~ /_R1\.fastq$/     ||
           $files[$i] =~ /_R1_\d+\.fastq$/ ||
           $files[$i] =~ /_R1_\d+_\w+\d+-[PS]E-R\d+.fastq$/ ||
+          $files[$i] =~ /_R1_unaligned_\d+.fastq$/ ||
           $files[$i] =~ /_1\.fq$/
          ) {
         open R1I, $files[$i];
@@ -356,6 +360,7 @@ sub combine {
       } elsif ($files[$i] =~ /_R1\.fastq.gz$/     ||
                $files[$i] =~ /_R1_\d+\.fastq.gz$/ ||
                $files[$i] =~ /_R1_\d+_\w+\d+-[PS]E-R\d+.fastq.gz$/ ||
+               $files[$i] =~ /_R1_unaligned_\d+.fastq.gz$/ ||
                $files[$i] =~ /_1\.fq\.gz$/
          ) {
         open R1I, "zcat $files[$i] |";
@@ -367,6 +372,7 @@ sub combine {
       } elsif ($files[$i] =~ /_R2\.fastq$/ ||
           $files[$i] =~ /_R2_\d+\.fastq$/  ||
           $files[$i] =~ /_R2_\d+_\w+\d+-[PS]E-R\d+.fastq$/ ||
+          $files[$i] =~ /_R2_unaligned_\d+.fastq$/ ||
           $files[$i] =~ /_2\.fq$/
          ) {
         open R2I, $files[$i];
@@ -378,6 +384,7 @@ sub combine {
       } elsif ($files[$i] =~ /_R2\.fastq.gz$/     ||
                $files[$i] =~ /_R2_\d+\.fastq.gz$/ ||
                $files[$i] =~ /_R2_\d+_\w+\d+-[PS]E-R\d+.fastq.gz$/ ||
+               $files[$i] =~ /_R2_unaligned_\d+.fastq.gz$/ ||
                $files[$i] =~ /_2\.fq\.gz$/
          ) {
         open R2I, "zcat $files[$i] |";
