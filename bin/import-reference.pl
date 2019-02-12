@@ -101,7 +101,7 @@ if ($download && !-f $ARGV[0]) {
   $tempdir = File::Temp::tempdir ( CLEANUP => 1 );
   $ff = File::Fetch->new( uri => $linfo->{fnaurl} );
   $ff->fetch( to => $tempdir );
-  $ffout = $ff->file;
+  $ffout = $ff->output_file;
   if ($ffout =~ /\.gz$/) {
     system("gunzip $tempdir/$ffout");
     $ffout =~ s/\.gz$//;
@@ -115,7 +115,7 @@ if ($download && !-f $data->{GFFFile}) {
   $tempdir = File::Temp::tempdir ( CLEANUP => 1 );
   $ff = File::Fetch->new( uri => $linfo->{gffurl} );
   $ff->fetch( to => $tempdir );
-  $ffout = $ff->file;
+  $ffout = $ff->output_file;
   if ($ffout =~ /\.gz$/) {
     system("gunzip $tempdir/$ffout");
     $ffout =~ s/\.gz$//;
