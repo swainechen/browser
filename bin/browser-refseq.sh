@@ -12,16 +12,11 @@ fi
 FIELD=19	# GCF
 FIELD=20	# GCA
 
-# get real script directory - from https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do
-  # resolve $SOURCE until the file is no longer a symlink
-  DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
-  SOURCE="$(readlink "$SOURCE")"
-  # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
-done
-DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+# get directory where the script sits - needed to find the config file
+# because the script might be linked, but the config file should be edited
+# so we want the final link location of the script
+# from https://unix.stackexchange.com/questions/17499/get-path-of-current-script-when-executed-through-a-symlink
+DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # set some common variables
 if [ -f $DIR/../etc/browser-conf.sh ]; then
