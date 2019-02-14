@@ -843,24 +843,34 @@ sub species_kraken {
 
 sub select_reference {
   my ($assembly, $num_to_test, $preferred_reference, $initial) = @_;
+  my $tempdir = set_option("tempdir");
+  $tempdir = "$tempdir/reference_genomes";
+  mkdir($tempdir);
   if (!defined $num_to_test || $num_to_test <= 0) {
     $num_to_test = 200;
   }
-  my $command = "$programs->{closest_species} -num_test $num_to_test $assembly";
+  my $command = "$programs->{closest_species} -num_test $num_to_test $assembly -download $tempdir";
   if ($initial ne "") {
     $command .= " -initial $initial";
   }
   my $output = `$command`;
   my @reference = split /\n/, $output;
+  foreach my $i (reverse 0..$#reference) {
+    if (!-f $reference[$i]) {
+      splice @reference, $i, 1;
+    }
+  }
   # if there was a reference specified, we'll use that as the "best"
   # move it around if it's already in the list, if not then just stick it
   # at the front
   if (defined $preferred_reference && length $preferred_reference && -f $preferred_reference) {
     unshift @reference, $preferred_reference;
-    foreach my $i (1..$#reference) {
-      if ($preferred_reference eq $reference[$i]) {
-        splice @reference, $i, 1;
-        last;
+    if (scalar @reference > 1) {
+      foreach my $i (1..$#reference) {
+        if ($preferred_reference eq $reference[$i]) {
+          splice @reference, $i, 1;
+          last;
+        }
       }
     }
   }
@@ -958,7 +968,7 @@ sub annotate_prokka {
   my $error;
   undef $genus;
   undef $species;
-  ($genus, $species) = split /_/, $refspecies;
+  ($genus, $species) = split / /, $refspecies;
   if (defined $genus && length $genus > 0) {
     if (defined $species && length $species > 0) {
       $species_flag = "--species $species";
@@ -1535,8 +1545,7 @@ sub do_single_library {
   #
   my $joined_assembly = join_assembly($assembly, $ordering, $final_sample_name);
   if (uc(set_option("ANNOTATOR")) eq "PROKKA") {
-    # we need the directory which has the genus/species name as the refspecies
-    &annotate_prokka($joined_assembly, $final_sample_name, basename(dirname(($reference[0]))));
+    &annotate_prokka($joined_assembly, $final_sample_name, $kraken_classification);
   } else {
     #
     # gene prediction
@@ -1595,6 +1604,10 @@ sub post_process {
     }
     if (-d "$tempdir/spades_working") {
       File::Path::remove_tree("$tempdir/spades_working");
+    }
+    if (-d "$tempdir/reference_genomes") {
+      # this would have been made by select_reference
+      File::Path::remove_tree("$tempdir/reference_genomes");
     }
   }
   &log("tar cvzf $output_dir/$final_sample_name.tgz $final_sample_name --exclude=*_fastq.txt");
