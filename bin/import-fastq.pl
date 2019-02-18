@@ -78,7 +78,7 @@ if (!defined $ARGV[0] || !length($ARGV[0])) {
 }
 # check for files
 my $runID = $ARGV[0];
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 my $DB_PARSER = DateTime::Format::DBI->new($DBH);
 my $TIP = GERMS::get_browser_tip($runID, $DBH, $USE_DB);
 if ($verbose) {

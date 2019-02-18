@@ -46,7 +46,7 @@ my $fullspecies = "";	# this is like "Escherichia coli"
 my $species = "";	# this is like "Ecoli"
 my $reference = "";
 my $URL = "";
-my $dbh = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 my $sql;
 my $sth;
 my $temp;
@@ -54,7 +54,7 @@ my $ff;
 
 if (uc($force_species) eq "NONE") {
   $sql = "SELECT Kraken FROM Fastq JOIN Tips ON Fastq.TIP = Tips.TIP WHERE Run = ?";
-  $sth = $dbh->prepare($sql);
+  $sth = $DBH->prepare($sql);
   $sth->execute($ARGV[0]);
   while (@data = $sth->fetchrow_array()) {
     if (length $data[0]) {
@@ -73,7 +73,7 @@ if (length $fullspecies) {
     # try to rescue this from species we know about
     $species = $fullspecies;
     $sql = "SELECT DISTINCT Kraken FROM Fastq";
-    $sth = $dbh->prepare($sql);
+    $sth = $DBH->prepare($sql);
     $sth->execute();
     while (@data = $sth->fetchrow_array()) {
       next if !defined $data[0];
@@ -96,7 +96,7 @@ if (length $fullspecies) {
 
 if (uc($force_reference) eq "NONE") {
   $sql = "SELECT ReferenceFile, URL FROM ReferenceGenomes WHERE DefaultReference = 1 AND Species = ?";
-  $sth = $dbh->prepare($sql);
+  $sth = $DBH->prepare($sql);
   $sth->execute($species);
   while (@data = $sth->fetchrow_array()) {
     if (length $data[0]) {
@@ -110,7 +110,7 @@ if (uc($force_reference) eq "NONE") {
   # or reference name as $force_reference
   $species = "";
   $sql = "SELECT Species, ReferenceFile, URL from ReferenceGenomes WHERE ReferenceFile LIKE '%?' OR ReferenceMD5 = ? OR ReferenceName = ?";
-  $sth = $dbh->prepare($sql);
+  $sth = $DBH->prepare($sql);
   $sth->execute("%" . $force_reference, $force_reference, $force_reference);
   while (@data = $sth->fetchrow_array()) {
     $species = $data[0];
@@ -178,4 +178,4 @@ print "SPECIES=$species\n";
 print "FULLSPECIES=\"$fullspecies\"\n";
 
 $sth->finish();
-$dbh->disconnect;
+$DBH->disconnect;

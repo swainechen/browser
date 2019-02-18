@@ -34,7 +34,7 @@ if ($show_help || !defined $ARGV[0] || !length $ARGV[0]) {
 
 my $exit = 0;
 my $USE_DB = 0;
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 my $sql;
 my $sth;
 my $tip;

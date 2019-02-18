@@ -6,7 +6,6 @@
 # .lofreq.gz - not really needed here
 # .tgz - info for Fastq and Assembly
 #
-use lib '/home/slchen/bin';
 use warnings;
 use strict;
 use slchen;
@@ -69,8 +68,6 @@ my $param_number;
 my $param_map;
 my @return;
 my $operation;
-my $SRADB = "/mnt/genomeDB/ncbi/sra/SRAmetadb.sqlite";
-my %ATTR;	# needed for SQLite connection - ?
 my $fastq_data;
 my $mlst_data;
 my $resistance_data;
@@ -169,7 +166,7 @@ if ($verbose) {
   print "Found these files:\n";
 }
 my $files_data;
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 my $DB_PARSER = DateTime::Format::DBI->new($DBH);
 my $TIP = GERMS::get_browser_tip($runID, $DBH, $USE_DB);
 $inputs->{TIP} = $TIP;

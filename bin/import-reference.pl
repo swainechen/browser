@@ -3,7 +3,7 @@
 # source file is an fna file
 # also need genomes_proks.txt
 # check for changes and do updates
-# database should be germs_browser
+# database should be configured in etc/GERMS.conf
 # table should be ReferenceGenomes
 #
 use warnings;
@@ -169,7 +169,7 @@ foreach $name (keys %$sequence) {
   }
 }
 
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 
 # need to manually handle default
 if ($data->{DefaultReference} && $USE_DB) {

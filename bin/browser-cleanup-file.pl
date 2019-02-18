@@ -41,7 +41,7 @@ if ($show_help) {
   exit;
 }
 
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 my $table_list;
 @{$table_list->{"srst2.gz"}} = qw(Genes Resistance MLST);
 @{$table_list->{"tgz"}} = qw(Assembly);
