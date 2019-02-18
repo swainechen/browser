@@ -16,7 +16,6 @@ use Data::Dumper;
 use DBI;
 use DateTime::Format::DBI;
 use DateTime::Format::DateParse;
-use FindBin;
 use strict;
 
 package GERMS;
@@ -35,17 +34,17 @@ sub dbconnect {
   my @paths = ("/etc/GERMS.conf",
                "/usr/etc/GERMS.conf",
                "/usr/local/etc/GERMS.conf",
-               "~/.GERMS.conf",
-               $FindBin::Bin . "../etc/GERMS.conf");
-  my $config = ();
+               "~/.GERMS.conf");
+  use vars qw($config);
   my $config_file;
 
   # default values first
   foreach my $config_file (@paths) {
     if (-f $config_file) {
-      do $config_file
+      do $config_file;
     }
   }
+
   if (defined $config->{DEFAULT} && (!defined $database || $database eq "")) {
     $database = $config->{DEFAULT};
   }
