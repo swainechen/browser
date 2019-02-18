@@ -2,11 +2,10 @@
 #
 # source file is a Seqsero_result.txt file
 # check for changes and do updates
-# database should be germs_browser
+# database should be configured in etc/GERMS.conf
 # table should be SENTERICA_Serotype
 # note as a metadata table this is assumed to be keyed on Run and not TIP
 #
-use lib '/home/slchen/bin';
 use warnings;
 use strict;
 use slchen;
@@ -134,7 +133,7 @@ while (<S>) {
 if ($runID eq "") {
   die "No Run ID given and can't figure it out from $input\n";
 }
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 my $DB_PARSER = DateTime::Format::DBI->new($DBH);
 my $TIP = GERMS::get_browser_tip($runID, $DBH, $USE_DB);
 

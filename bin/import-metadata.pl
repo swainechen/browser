@@ -3,10 +3,9 @@
 # take tab delimited text file
 # expected "<species>metadata.txt"
 # check for changes and do updates
-# database should be germs_browser
+# database should be configured in etc/GERMS.conf
 # table should be based on species name
 #
-use lib '/home/slchen/bin';
 use warnings;
 use strict;
 use slchen;
@@ -76,7 +75,7 @@ if (File::Basename::basename($ARGV[0]) =~ /^(\w+)[.-_]?metadata.txt/) {
   exit;
 }
 
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 
 # pick off the columns from the first line
 $status = ();

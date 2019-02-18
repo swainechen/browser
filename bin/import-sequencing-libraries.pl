@@ -3,7 +3,7 @@
 # take tab delimited text file
 # expected "/home/slchen/rdrive/ID/ID3/Swaine/Chen lab sequencing libraries.txt"
 # check for changes and do updates
-# database should be germs_browser
+# database should be configured in etc/GERMS.conf
 # table should be Studies
 #
 use lib '/home/slchen/bin';
@@ -71,7 +71,7 @@ if ($show_help || !-f $libraries_file) {
   exit;
 }
 
-my $DBH = GERMS::dbconnect("germs_browser");
+my $DBH = GERMS::dbconnect();
 
 # we are expecting these columns:
 #   Run VARCHAR(255) NOT NULL,
