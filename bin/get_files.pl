@@ -9,12 +9,13 @@
 use File::Basename;
 use File::Spec;
 use Cwd;
+use FindBin;
 use Getopt::Long;
 use DBI;
 &Getopt::Long::Configure("pass_through");
 
 # some globals
-my $SRADB = "/mnt/volume1/fastq/SRAmetadb.sqlite";
+my $SRADB = $FindBin::Bin . "/../lib/ncbi/SRAmetadb.sqlite";
 my $DBH;
 my %ATTR;
 my $TEMPDIR = "/tmp";
@@ -193,6 +194,9 @@ sub sra_files {
   my $size;
   my $maxsize = 0;
   my $filename;
+  if (!-d "$dir/$run") {
+    return ();
+  }
   opendir(D, "$dir/$run");
   while ($f = readdir D) {
     if ($f =~ /($run)_\d\.fastq\.gz/) {
