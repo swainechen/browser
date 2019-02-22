@@ -6,6 +6,7 @@ use Orgmap;
 use File::Temp;
 use File::Fetch;
 use File::Basename;
+use FindBin;
 use Getopt::Long;
 Getopt::Long::Configure("pass_through");
 
@@ -27,7 +28,7 @@ Getopt::Long::Configure("pass_through");
 # 13 - Release Date: 2005-06-27T00:00:00Z
 # 14 - GenBank FTP: ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/006/605/GCA_000006605.1_ASM660v1
 # 15 - RefSeq FTP: ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/605/GCF_000006605.1_ASM660v1
-my $PROKS_CSV = "/mnt/volume1/fastq/prokaryotes.csv";
+my $PROKS_CSV = $FindBin::Bin . "/../lib/ncbi/prokaryotes.csv";
 # number of genomes to get on the fly from the above file if needed
 my $NEW_DOWNLOAD = 10;
 my $DOWNLOAD = "";
