@@ -81,6 +81,8 @@ if (defined $output->{FASTQ}->{ILLUMINA}) {
       $output->{FASTQ}->{ILLUMINA}->{Kraken} eq "") {
     $exit += 2;
   }
+} else {
+  $exit += 2;
 }
 
 # Files - this has more keys (TIP, Type, MD5)
@@ -109,9 +111,10 @@ $sth->execute($tip);
 while (@data = $sth->fetchrow_array()) {
   $output->{SRST2}->{Resistance}->{$data[1]}->{$data[2]} = $data[0];
 }
-if ($sth->rows != 1) {
-  $error_srst2 = 1;
-}
+# sometimes we just don't have resistance, so don't count an error on this
+#if ($sth->rows != 1) {
+#  $error_srst2 = 1;
+#}
 $sql = "SELECT MLSTDatabase, MLST, SOURCE, SourceFileMD5 FROM MLST WHERE TIP = ? GROUP BY SOURCE, SourceFileMD5";
 $sth = $DBH->prepare($sql);
 $sth->execute($tip);
@@ -126,10 +129,14 @@ $exit += 8 if $error_srst2;
 # Assembly
 $r = get_all_from_table("Assembly", "TIP", $tip, "assembly");
 $output->{ASSEMBLY} = $r;
-foreach $i (keys %{$output->{ASSEMBLY}}) {
-  next if $i eq "assembly";
-  if (!defined $output->{ASSEMBLY}->{$i}->{N50}) {
-    $exit += 16;
+if (scalar keys %{$output->{ASSEMBLY}} == 0) {
+  $exit += 16;
+} else {
+  foreach $i (keys %{$output->{ASSEMBLY}}) {
+    next if $i eq "assembly";
+    if (!defined $output->{ASSEMBLY}->{$i}->{N50}) {
+      $exit += 16;
+    }
   }
 }
 
