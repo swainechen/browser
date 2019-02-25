@@ -13,9 +13,12 @@ use Getopt::Long;
 
 my $verbose = 0;
 my $runID = $ARGV[0];
-my $operation = lc($ARGV[1]);
+my $operation = $ARGV[1];
+if (defined $operation) { $operation = lc($operation); }
 my $TIP;
 my $date_now = DateTime->now;
+my $INSTANCE = `GET http://169.254.169.254/latest/meta-data/instance-id`;
+chomp $INSTANCE;
 my $STAGING = $ENV{"STAGING"};
 my $DBH;
 my $DB_PARSER;
@@ -76,19 +79,19 @@ if ($operation eq "start") {
     exit(1);
   }
   # should be safe to insert now
-  $sql = "INSERT INTO $TABLE (Run, Started) VALUES (?, ?)";
+  $sql = "INSERT INTO $TABLE (Run, InstanceID, Started) VALUES (?, ?, ?)";
   $sth = $DBH->prepare($sql);
-  $sth->execute($runID, $date_now) || die "Error: " . $sth->errstr . "\n";
+  $sth->execute($runID, $INSTANCE, $date_now) || die "Error: " . $sth->errstr . "\n";
   if ($verbose) {
-    print "Inserted row for $runID, started at $date_now\n";
+    print "Inserted row for $runID, started at $date_now on $INSTANCE\n";
   }
 }
 
 if ($operation eq "finish") {
   # some sanity - there should be a row there already
-  $sql = "SELECT Run, Finished, Species, Success FROM $TABLE WHERE Run = ?";
+  $sql = "SELECT Run, Finished, Species, Success FROM $TABLE WHERE Run = ? AND InstanceID = ?";
   $sth = $DBH->prepare($sql);
-  $sth->execute($runID);
+  $sth->execute($runID, $INSTANCE);
   undef $tempdate;
   $species = "";
   while (@data = $sth->fetchrow_array()) {
@@ -97,10 +100,10 @@ if ($operation eq "finish") {
     $tempsuccess = $data[3];
   }
   if ($sth->rows() == 0) {
-    die "Operation finish but no existing row for $runID, exiting...\n";
+    die "Operation finish but no existing row for $runID on $INSTANCE, exiting...\n";
   }
   if (defined $tempdate && length($tempdate)) {
-    die "Already have a finished row for $runID, species $species, success $tempsuccess\n";
+    die "Already have a finished row for $runID on $INSTANCE, species $species, success $tempsuccess\n";
   }
   # last parameter is typically $USE_DB but we're not changing anything in Tips
   $TIP = GERMS::get_browser_tip($runID, $DBH, 0);
@@ -117,11 +120,11 @@ if ($operation eq "finish") {
   }
   if (defined $TIP && $? == 0) {
     # this looks successful - last get species data
-    $sql = "UPDATE $TABLE SET Finished = ?, TIP = ?, Species = ?, Success = ? WHERE Run = ?";
+    $sql = "UPDATE $TABLE SET Finished = ?, TIP = ?, Species = ?, Success = ? WHERE Run = ? AND InstanceID = ?";
     $sth = $DBH->prepare($sql);
-    $sth->execute($date_now, $TIP, $species, "Y", $runID) || die "Error: " . $sth->errstr . "\n";
+    $sth->execute($date_now, $TIP, $species, "Y", $runID, $INSTANCE) || die "Error: " . $sth->errstr . "\n";
     if ($verbose) {
-      print "Updated row for $runID, finished successfully at $date_now\n";
+      print "Updated row for $runID on $INSTANCE, finished successfully at $date_now\n";
     }
   } else {
     # had some error, save the log
@@ -132,11 +135,11 @@ if ($operation eq "finish") {
       $log = <F>;
       close F;
     }
-    $sql = "UPDATE $TABLE SET Finished = ?, TIP = ?, Species = ?, Success = ?, LogBlob = ? WHERE Run = ?";
+    $sql = "UPDATE $TABLE SET Finished = ?, TIP = ?, Species = ?, Success = ?, LogBlob = ? WHERE Run = ? AND InstanceID = ?";
     $sth = $DBH->prepare($sql);
-    $sth->execute($date_now, $TIP, $species, "N", $log, $runID) || die "Error: " . $sth->errstr . "\n";
+    $sth->execute($date_now, $TIP, $species, "N", $log, $runID, $INSTANCE) || die "Error: " . $sth->errstr . "\n";
     if ($verbose) {
-      print "Updated row for $runID, finished unsuccessfully at $date_now\n";
+      print "Updated row for $runID on $INSTANCE, finished unsuccessfully at $date_now\n";
       if (defined $log) {
         print "Log at $STAGING/$runID.log saved\n";
       } else {
