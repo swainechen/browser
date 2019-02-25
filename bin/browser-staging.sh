@@ -19,9 +19,11 @@ CURRENTHOST=$( hostname -s )
 # check if on AWS - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/identify_ec2_instances.html
 if GET http://169.254.169.254/latest/dynamic/instance-identity/ > /dev/null; then
   cd $STAGING
+  browser-track.pl $RUN start
   $SNAKE -s $FQSNAKE fastq -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log
   $BROWSER_BASE/bin/browser-species.sh $RUN 2>> $RUN.log
   tail -n 1 $RUN.log | grep -q 100...done && $SNAKE -s $FQSNAKE cleanup -p -j 1 --ri --configfile $CONF --config ACC=$RUN 2>> $RUN.log
+  browser-track.pl $RUN finish
 else
   case $CURRENTHOST in
   aquilaln1|aquilaln2)
