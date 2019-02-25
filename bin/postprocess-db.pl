@@ -78,6 +78,10 @@ my $s3_date;
 my $s3_MD5;
 my $s3_temp;
 my $s3_command;
+my $secondary;
+my $secondary_MD5;
+my $secondary_S3 = "s3://germsbrowser/";
+my $secondary_PROFILE = "germs";
 my @order = qw(
   AGly
   Bla
@@ -470,6 +474,57 @@ if ($push_s3) {
       $S3_REFDIR = pop @g;
     }
   }
+
+  # secondary files go to web browser
+  # These are .resistance.fasta, .gbk, .gcov.png
+  # do these first because .gocv.png might get deleted (moved) below
+  if (length($S3_SPECIES)) {
+    $secondary_S3 .= uc($S3_SPECIES);
+    foreach $dir (@data_dirs) {
+      if (-f "$dir/$runID.gcov.png") {
+        $secondary = File::Spec->rel2abs("$dir/$runID.gcov.png");
+        $secondary_MD5 = `md5sum $secondary | cut -f1 -d' '`;
+        chomp($secondary_MD5);
+        $s3_command = "aws --profile $secondary_PROFILE s3 cp $secondary $secondary_S3/coverage/ --metadata MD5sum=$secondary_MD5";
+        if ($verbose) {
+          print "Running: $s3_command\n";
+        }
+        $j = `$s3_command`;
+        if ($? != 0) {
+          print STDERR "error on $secondary_S3 on $secondary\n";
+        }
+      }
+      if (-f "$dir/$runID.resistance.fasta") {
+        $secondary = File::Spec->rel2abs("$dir/$runID.resistance.fasta");
+        $secondary_MD5 = `md5sum $secondary | cut -f1 -d' '`;
+        chomp($secondary_MD5);
+        $s3_command = "aws --profile $secondary_PROFILE s3 cp $secondary $secondary_S3/resistance/ --metadata MD5sum=$secondary_MD5";
+        if ($verbose) {
+          print "Running: $s3_command\n";
+        }
+        $j = `$s3_command`;
+        if ($? != 0) {
+          print STDERR "error on $secondary_S3 on $secondary\n";
+        }
+      }
+      if (-f "$dir/$runID.gbk") {
+        $secondary = File::Spec->rel2abs("$dir/$runID.gbk");
+        $secondary_MD5 = `md5sum $secondary | cut -f1 -d' '`;
+        chomp($secondary_MD5);
+        $s3_command = "aws --profile $secondary_PROFILE s3 cp $secondary $secondary_S3/assembly/ --metadata MD5sum=$secondary_MD5";
+        if ($verbose) {
+          print "Running: $s3_command\n";
+        }
+        $j = `$s3_command`;
+        if ($? != 0) {
+          print STDERR "error on $secondary_S3 on $secondary\n";
+        }
+      }
+    }
+  }
+
+  # main archive - we are capturing .lofreq.gz, .gcov.gz, .gcov.png, .srst2.gz, .tgz
+  # note we are not doing .lofreq.gz.tbi, since that's quick to generate
   if (length($S3_REFDIR)) {
     # check for existence, timestamp, MD5 if present to decide on upload
     foreach $ext (keys %$inputs) {
