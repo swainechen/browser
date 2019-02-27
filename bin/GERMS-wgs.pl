@@ -675,8 +675,8 @@ sub scaffold_OPERA {
     File::Copy::copy($contigs, $expected_file);
     &shortlog("q1 and q2 files the same.  Skipping scaffolding.");
   } else {
-    # OPERA makes an assumption about where perl is that's not true for us
-    my $command = "perl $programs->{OPERA_preprocess} $contigs $q1 $q2 $map_file $mapper";
+    # syntax changed at least as of OPERA_LG_v2.0.6
+    my $command = "$programs->{OPERA_preprocess} --contig $contigs --illumina-read1 $q1 --illumina-read2 $q2 --out $map_file --map-tool $mapper";
     &shortlog($command);
     my $output = `$command 2>&1`;
     # OPERA's preprocess leaves this read.sai file
