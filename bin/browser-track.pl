@@ -40,11 +40,13 @@ GetOptions (
 );
 
 if (!defined $runID || !length($runID) ||
-    !defined $operation || ($operation ne "start" && $operation ne "finish")) {
+    !defined $operation || ($operation ne "start" && $operation ne "finish" && $operation ne "clear")) {
   print "Usage: $0 <runID> start [ -verbose ]\n";
   print "       $0 <runID> finish [ -verbose ]\n";
+  print "       $0 <runID> clear [ -verbose ]\n";
   print "start will insert a row into the Tracking table\n";
   print "finish will check for files and update the Tracking table\n";
+  print "clear will remove a row from the Tracking table - this will always ask for confirmation\n";
   exit;
 }
 
@@ -148,5 +150,33 @@ if ($operation eq "finish") {
         print "Could not find $STAGING/$runID.log\n";
       }
     }
+  }
+}
+
+if ($operation eq "clear") {
+  $sql = "SELECT Run, InstanceID, InstanceType, Started, Success FROM $TABLE WHERE Run = ?";
+  $sth = $DBH->prepare($sql);
+  $sth->execute($runID);
+  print "Found the following for $runID in $TABLE Table:\n";
+  while (@data = $sth->fetchrow_array()) {
+    $data[4] = "" if !defined $data[4];	# all else should be not null
+    print join("\t", @data), "\n";
+  }
+  print "Total: ", $sth->rows(), " rows will be deleted\n";
+  print "Continue? (y/N): ";
+  $command_output = <STDIN>;
+  if ($command_output =~ /^y/i) {
+    $sql = "DELETE FROM $TABLE WHERE Run = ?";
+    $sth = $DBH->prepare($sql);
+    $sth->execute($runID) || die "Error: " . $sth->errstr . "\n";
+    $sql = "SELECT Run, InstanceID FROM $TABLE WHERE Run = ?";
+    $sth = $DBH->prepare($sql);
+    $sth->execute($runID);
+    while (@data = $sth->fetchrow_array()) {
+      next;
+    }
+    print $sth->rows(), " rows left for $runID in $TABLE Table\n";
+  } else {
+    print "Aborting, no changes to $TABLE Table...\n";
   }
 }
