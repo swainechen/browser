@@ -162,6 +162,10 @@ if ($operation eq "clear") {
     $data[4] = "" if !defined $data[4];	# all else should be not null
     print join("\t", @data), "\n";
   }
+  if ($sth->rows() == 0) {
+    print "No rows found for $runID in $TABLE Table. Exiting...\n";
+    exit;
+  }
   print "Total: ", $sth->rows(), " rows will be deleted\n";
   print "Continue? (y/N): ";
   $command_output = <STDIN>;
