@@ -103,6 +103,12 @@ my @not_wanted = (
   "contigs.txt.pac",
   "contigs.txt.bwt",
   "contigs.txt.sa",
+  "contigs.txt.1.ebwt",
+  "contigs.txt.2.ebwt",
+  "contigs.txt.3.ebwt",
+  "contigs.txt.4.ebwt",
+  "contigs.txt.rev.1.ebwt",
+  "contigs.txt.rev.2.ebwt",
   "spades.fasta.amb",
   "spades.fasta.ann",
   "spades.fasta.bwt",
@@ -131,7 +137,8 @@ $default_options->{FASTQC}->{dofastqc} = 0;
 $default_options->{threads} = 16;
 $default_options->{ASSEMBLER} = "velvetoptimizer";
 $default_options->{SCAFFOLDER} = "opera";
-$default_options->{OPERA}->{mapper} = "bwa";
+# As of OPERA_LG_v2.0.6 there are some syntax errors with bwa as mapper
+$default_options->{OPERA}->{mapper} = "bowtie";
 $default_options->{contig_min} = 500;
 $default_options->{ANNOTATOR} = "prokka";	# versus "old"
 $default_options->{MAXREADS} = 5000000;
