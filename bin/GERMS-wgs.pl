@@ -49,7 +49,7 @@ $programs->{closest_species} = "$local_bin_dir/closest_species.pl";
 $programs->{VelvetShuffle} = "$local_bin_dir/shuffleSequences_fastq.pl";
 $programs->{VelvetOptimiser} = "$local_bin_dir/VelvetOptimiser.pl";
 $programs->{velvetg} = "$local_bin_dir/velvetg";
-$programs->{FinIS} = "$local_bin_dir/finis";
+$programs->{FinIS} = "$local_bin_dir/FinIS";
 $programs->{spades} = "$local_bin_dir/spades.py";
 $programs->{prokka} = "$local_bin_dir/prokka";
 $programs->{seqtk} = "$local_bin_dir/seqtk";
@@ -711,8 +711,7 @@ sub scaffold_OPERA {
 sub finish_FinIS {
   my ($velvet_folder, $scaffolds, $output_dir) = @_;
   my $expected_file;
-  # as of 0.3 the number of threads is a required command line parameter
-  my $command = "$programs->{FinIS} $velvet_folder $scaffolds $output_dir " . set_option("threads");
+  my $command = "$programs->{FinIS} $velvet_folder $scaffolds $output_dir";
   my $output;
   my $finis_file = "$output_dir/scaffolds.filled.fasta";
   # check for what we need
