@@ -40,10 +40,11 @@ GetOptions (
 );
 
 if (!defined $runID || !length($runID) ||
-    !defined $operation || ($operation ne "start" && $operation ne "finish" && $operation ne "clear")) {
+    !defined $operation || ($operation ne "start" && $operation ne "finish" && $operation ne "clear" && $operation ne "getlog")) {
   print "Usage: $0 <runID> start [ -verbose ]\n";
   print "       $0 <runID> finish [ -verbose ]\n";
   print "       $0 <runID> clear [ -verbose ]\n";
+  print "       $0 <runID> getlog [ -verbose ]\n";
   print "start will insert a row into the Tracking table\n";
   print "finish will check for files and update the Tracking table\n";
   print "clear will remove a row from the Tracking table - this will always ask for confirmation\n";
@@ -182,5 +183,23 @@ if ($operation eq "clear") {
     print $sth->rows(), " rows left for $runID in $TABLE Table\n";
   } else {
     print "Aborting, no changes to $TABLE Table...\n";
+  }
+}
+
+if ($operation eq "getlog") {
+  $sql = "SELECT LogBlob FROM $TABLE WHERE Run = ?";
+  $sth = $DBH->prepare($sql);
+  $sth->execute($runID);
+  @data = $sth->fetchrow_array();
+  if (defined $data[0]) {
+    if (-f "$runID.log.gz") {
+      print "$runID.log.gz already exists, refusing to overwrite...\n";
+    } else {
+      open F, ">$runID.log.gz";
+      print F $data[0];
+      close F;
+    }
+  } else {
+    print "No Log stored in $TABLE Table for $runID\n";
   }
 }
