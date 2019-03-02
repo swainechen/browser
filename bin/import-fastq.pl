@@ -21,7 +21,7 @@ use GERMS;
 
 my $GET_FILES = `which get_files.pl`; chomp $GET_FILES;
 my $RUN_KRAKEN = `which run-kraken.pl`; chomp $RUN_KRAKEN;
-my $SRADB = "/mnt/volume1/fastq/SRAmetadb.sqlite";
+my $SRADB = $ENV{"SRADB"};
 my %ATTR;	# needed for SQLite connection - ?
 my $USE_DB = 0;
 my $verbose = 0;
