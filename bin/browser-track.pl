@@ -34,8 +34,10 @@ my $species;
 my $tempdate;
 my $command_output;
 my $tempsuccess;
+my $output_log = "";
 
 GetOptions (
+  "output=s" => \$output_log,
   "verbose!" => \$verbose
 );
 
@@ -44,10 +46,11 @@ if (!defined $runID || !length($runID) ||
   print "Usage: $0 <runID> start [ -verbose ]\n";
   print "       $0 <runID> finish [ -verbose ]\n";
   print "       $0 <runID> clear [ -verbose ]\n";
-  print "       $0 <runID> getlog [ -verbose ]\n";
+  print "       $0 <runID> getlog [ -output <log output filename> ] [ -verbose ]\n";
   print "start will insert a row into the Tracking table\n";
   print "finish will check for files and update the Tracking table\n";
   print "clear will remove a row from the Tracking table - this will always ask for confirmation\n";
+  print "getlog will get the gzipped log file if it exists and output to specified file (default is runID.log.gz in the current directory)\n";
   exit;
 }
 
@@ -137,6 +140,7 @@ if ($operation eq "finish") {
     if (-f "$STAGING/$runID.log") {
       system "gzip $STAGING/$runID.log";
       open F, "$STAGING/$runID.log.gz";
+      local $/ = undef;
       $log = <F>;
       close F;
     }
@@ -187,15 +191,18 @@ if ($operation eq "clear") {
 }
 
 if ($operation eq "getlog") {
+  if ($output_log eq "") {
+    $output_log = "$runID.log.gz";
+  }
   $sql = "SELECT LogBlob FROM $TABLE WHERE Run = ?";
   $sth = $DBH->prepare($sql);
   $sth->execute($runID);
   @data = $sth->fetchrow_array();
   if (defined $data[0]) {
-    if (-f "$runID.log.gz") {
-      print "$runID.log.gz already exists, refusing to overwrite...\n";
+    if (-f $output_log) {
+      print "$output_log already exists, refusing to overwrite...\n";
     } else {
-      open F, ">$runID.log.gz";
+      open F, ">$output_log";
       print F $data[0];
       close F;
     }
