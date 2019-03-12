@@ -125,7 +125,14 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
     print join ($delimiter, @out), "\n";
     exit;
   }
-  $command = "wget $url --tries=$tries --quiet -O $TEMPDIR/$run.sra && $fqd --split-files --gzip -O $dir/$run $TEMPDIR/$run.sra && rm -f $TEMPDIR/$run.sra > /dev/null 2>&1";
+  # first check if it's on S3
+  $command = "aws --profile $S3_PROFILE s3 ls $S3_BASE/$ARGV[0]/ > /dev/null";
+  system ($command);
+  if ($? != 0) {
+    $command = "wget $url --tries=$tries --quiet -O $TEMPDIR/$run.sra && $fqd --split-files --gzip -O $dir/$run $TEMPDIR/$run.sra && rm -f $TEMPDIR/$run.sra > /dev/null 2>&1";
+  } else {
+    $command = "mkdir -p $dir/$ARGV[0]; cd $dir/$ARGV[0]; aws --profile $S3_PROFILE s3 sync $S3_BASE/$ARGV[0]/ . > /dev/null 2>&1";
+  }
   if ($debug) {
     print STDERR "Trying to get files from GenBank SRA. Running command:\n";
     print STDERR "$command\n";
