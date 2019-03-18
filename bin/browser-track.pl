@@ -83,8 +83,8 @@ if ($operation eq "start") {
   if ($? == 0) {
     $TIP = GERMS::get_browser_tip($runID, $DBH, 0);
     print "Appears that Run is already done, Tip $TIP\n";
-    print "Not inserting\n";
-    exit(1);
+    print "Inserting anyway...\n";
+#    exit(1);
   }
   # should be safe to insert now
   $sql = "INSERT INTO $TABLE (Run, InstanceID, InstanceType, Started) VALUES (?, ?, ?, ?)";
