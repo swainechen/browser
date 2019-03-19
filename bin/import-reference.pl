@@ -19,6 +19,7 @@ use File::Basename;
 use File::Fetch;
 use File::Temp;
 use File::Copy;
+use FindBin;
 use Getopt::Long;
 use GERMS;
 
@@ -29,7 +30,16 @@ my $download = 0;
 my $species = "";
 my $set_default = 0;
 my $force = 0;	# update no matter what - ignore date stamps
-my $OUTBREAK_BASE = $ENV{'OUTBREAK_BASE'}
+my $OUTBREAK_BASE = $ENV{'OUTBREAK_BASE'};
+my $PROKS = $FindBin::Bin . "/../lib/ncbi/prokaryotes.csv";
+if (!-f $PROKS) {
+  # try a few other possibilities
+  if (-f "$ENV{GERMS_DATA}/prokaryotes.csv") {
+    $PROKS = "$ENV{GERMS_DATA}/prokaryotes.csv";
+  } elsif (-f "$ENV{GERMS_DATA}/genomes_proks.txt") {
+    $PROKS = "$ENV{GERMS_DATA}/genomes_proks.txt";
+  }
+}
 
 &Getopt::Long::Configure("pass_through");
 GetOptions (
@@ -95,7 +105,7 @@ $data = ();
 $data->{ReferenceFile} = File::Spec->rel2abs($ARGV[0]);
 $accession = File::Basename::basename($data->{ReferenceFile});
 $accession =~ s/_genomic\.fna$//;
-$linfo = parse_lproks($accession);
+$linfo = parse_proks($accession);
 if ($download && !-f $ARGV[0]) {
   print "Downloading $linfo->{fnaurl}\n" if $verbose;
   $tempdir = File::Temp::tempdir ( CLEANUP => 1 );
@@ -198,9 +208,8 @@ if ($verbose) {
   print "  NOTHING for $status->{NOTHING} lines\n";
 }
 
-sub parse_lproks {
+sub parse_proks {
   my ($accession) = @_;
-  my $lproks = "$ENV{GERMS_DATA}/genomes_proks.txt";
   my @f;
   my @g;
   my @h;
@@ -209,41 +218,80 @@ sub parse_lproks {
   my $r = ();
   my @replicons;
   $r->{urlbase} = "";
-  open F, $lproks;
+  open F, $PROKS;
   while (<F>) {
     chomp;
     next if /^#/;
     next if /^$/;
     @f = split /\t/, $_;
-    if ($f[18] =~ /$accession/) {
-      $r->{urlbase} = $f[18];
-    } elsif ($f[19] =~ /$accession/) {
-      $r->{urlbase} = $f[19];
-    }
-    if ($r->{urlbase} ne "") {
-      @g = split /\//, $r->{urlbase};
-      $r->{fnaurl} = "$r->{urlbase}/$g[$#g]_genomic.fna.gz";
-      $r->{gffurl} = "$r->{urlbase}/$g[$#g]_genomic.gff.gz";
-      $r->{longname} = $f[0];
-      $r->{shortname} = $f[1];
-      # $f[10] is for ex:
-      # chromosome:NC_002488.3/AE003849.1; plasmid pXF1.3:NC_002489.3/AE003850.3; plasmid pXF51:NC_002490.1/AE003851.1
-      @replicons = split /;/, $f[10];
-      foreach $i (0..$#replicons) {
-        # now each should be like:
-        # chromosome:NC_002488.3/AE003849.1
-        # plasmid pXF1.3:NC_002489.3/AE003850.3
-        $replicons[$i] =~ s/^\s+//;
-        $replicons[$i] =~ s/\s+$//;
-        @g = split /:/, $replicons[$i];
-        @h = split /\//, $g[1];
-        foreach $j (0..$#h) {
-          $r->{name}->{$h[$j]} = $g[0];
-          $r->{type}->{$h[$j]} = $g[0];
-          $r->{type}->{$h[$j]} =~ s/\s+.*$//;
+    if ($#f >= 18) {
+      # assume old format
+      if ($f[18] =~ /$accession/) {
+        $r->{urlbase} = $f[18];
+      } elsif (defined $f[19] && $f[19] =~ /$accession/) {
+        $r->{urlbase} = $f[19];
+      }
+      if ($r->{urlbase} ne "") {
+        @g = split /\//, $r->{urlbase};
+        $r->{fnaurl} = "$r->{urlbase}/$g[$#g]_genomic.fna.gz";
+        $r->{gffurl} = "$r->{urlbase}/$g[$#g]_genomic.gff.gz";
+        $r->{longname} = $f[0];
+        $r->{shortname} = $f[1];
+        # $f[10] is for ex:
+        # chromosome:NC_002488.3/AE003849.1; plasmid pXF1.3:NC_002489.3/AE003850.3; plasmid pXF51:NC_002490.1/AE003851.1
+        @replicons = split /;/, $f[10];
+        foreach $i (0..$#replicons) {
+          # now each should be like:
+          # chromosome:NC_002488.3/AE003849.1
+          # plasmid pXF1.3:NC_002489.3/AE003850.3
+          $replicons[$i] =~ s/^\s+//;
+          $replicons[$i] =~ s/\s+$//;
+          @g = split /:/, $replicons[$i];
+          @h = split /\//, $g[1];
+          foreach $j (0..$#h) {
+            $r->{name}->{$h[$j]} = $g[0];
+            $r->{type}->{$h[$j]} = $g[0];
+            $r->{type}->{$h[$j]} =~ s/\s+.*$//;
+          }
+        }
+        last;
+      }
+    } else {
+      @f = split /,/, $_;
+      if ($#f >= 14) {
+        foreach $j (0..$#f) {
+          $f[$j] =~ s/^"//;
+          $f[$j] =~ s/"$//;
+        }
+        if ($f[14] =~ /$accession/) {
+          $r->{urlbase} = $f[14];
+        } elsif (defined $f[15] && $f[15] =~ /$accession/) {
+          $r->{urlbase} = $f[15];
+        }
+        if ($r->{urlbase} ne "") {
+          @g = split /\//, $r->{urlbase};
+          $r->{fnaurl} = "$r->{urlbase}/$g[$#g]_genomic.fna.gz";
+          $r->{gffurl} = "$r->{urlbase}/$g[$#g]_genomic.gff.gz";
+          $r->{longname} = $f[0];
+          $r->{shortname} = $f[2];
+          @replicons = split /;/, $f[9];
+          foreach $i (0..$#replicons) {
+            # now each should be like:
+            # chromosome:NC_002488.3/AE003849.1
+            # plasmid pXF1.3:NC_002489.3/AE003850.3
+            $replicons[$i] =~ s/^\s+//;
+            $replicons[$i] =~ s/\s+$//;
+            @g = split /:/, $replicons[$i];
+            @h = split /\//, $g[1];
+            foreach $j (0..$#h) {
+              $r->{name}->{$h[$j]} = $g[0];
+              $r->{type}->{$h[$j]} = $g[0];
+              $r->{type}->{$h[$j]} =~ s/\s+.*$//;
+            }
+          }
+          last;
         }
       }
-      last;
     }
   }
   return $r;
