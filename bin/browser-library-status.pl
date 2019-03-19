@@ -102,7 +102,9 @@ $sth->execute($tip);
 while (@data = $sth->fetchrow_array()) {
   $output->{SRST2}->{Genes}->{$data[1]}->{$data[2]} = $data[0];
 }
-if ($sth->rows != 1) {
+# We end up postprocessing and putting in a second file on a rerun.
+# Don't flag this as an error
+if ($sth->rows < 1) {
   $error_srst2 = 1;
 }
 $sql = "SELECT COUNT(*), SOURCE, SourceFileMD5 FROM Resistance WHERE TIP = ? GROUP BY SOURCE, SourceFileMD5";
