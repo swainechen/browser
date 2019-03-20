@@ -129,13 +129,18 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   $command = "aws --profile $S3_PROFILE s3 ls $S3_BASE/$ARGV[0]/ > /dev/null";
   system ($command);
   if ($? != 0) {
-    $command = "wget $url --tries=$tries --quiet -O $TEMPDIR/$run.sra && $fqd --split-files --gzip -O $dir/$run $TEMPDIR/$run.sra && rm -f $TEMPDIR/$run.sra > /dev/null 2>&1";
+    # let sra utils take care of the urls - can remove make_url procedure and reliance on it now
+    $command = "$fqd --split-files --gzip -O $dir/$run $run > /dev/null 2>&1 ; rm -f ~/ncbi/public/sra/$run.sra";
+    if ($debug) {
+      print STDERR "Trying to get files from GenBank SRA. Running command:\n";
+      print STDERR "$command\n";
+    }
   } else {
     $command = "mkdir -p $dir/$ARGV[0]; cd $dir/$ARGV[0]; aws --profile $S3_PROFILE s3 sync $S3_BASE/$ARGV[0]/ . > /dev/null 2>&1";
-  }
-  if ($debug) {
-    print STDERR "Trying to get files from GenBank SRA. Running command:\n";
-    print STDERR "$command\n";
+    if ($debug) {
+      print STDERR "Trying to get files from AWS S3. Running command:\n";
+      print STDERR "$command\n";
+    }
   }
   if ($checkonly) {
     exit 1;
