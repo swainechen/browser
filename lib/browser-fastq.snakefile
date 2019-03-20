@@ -17,4 +17,4 @@ rule cleanup:
 
 rule fastq:
     shell:
-        "{config[GETFILES]} {config[ACC]} && {config[IMPORT_FASTQ]} {config[ACC]} -db;"
+        "{config[GETFILES]} {config[ACC]} && {config[IMPORT_FASTQ]} {config[ACC]} -db -force;"
