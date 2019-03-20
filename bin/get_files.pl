@@ -188,8 +188,27 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
     print join ($delimiter, @out), "\n";
     exit;
   }
+  # check if it's on S3
+  $command = "aws --profile $S3_PROFILE s3 ls $S3_BASE/$ARGV[0]/ > /dev/null";
+  system ($command);
+  if ($? == 0) {
+    $command = "mkdir -p $dir/$ARGV[0]; cd $dir/$ARGV[0]; aws --profile $S3_PROFILE s3 sync $S3_BASE/$ARGV[0]/ . > /dev/null 2>&1";
+    if ($checkonly) {
+      exit 1;
+    } else {
+      system ($command);
+    }
+    if ($? != 0) {
+      die "Some error ($?) with AWS S3 copy...\n";
+    }
+  }
   chdir $current;
-  die "Couldn't figure out what $ARGV[0] is.\n";
+  @out = sra_files($ARGV[0], $dir);
+  if (scalar @out) {
+    print join ($delimiter, @out), "\n";
+  } else {
+    die "Couldn't figure out what $ARGV[0] is.\n";
+  }
 }
 chdir $current;
 
