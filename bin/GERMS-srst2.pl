@@ -235,6 +235,10 @@ sub set_mlst_data {
   $meta->{"Ecloacae"}->{DEFINITIONS} = "$mlst_base/ecloacae.txt";
   $meta->{"Ecloacae"}->{DELIMITER} = "_";
 
+  $meta->{"Ccoli"}->{FASTA} = "$mlst_base/Campylobacter_jejuni.fasta";
+  $meta->{"Ccoli"}->{DEFINITIONS} = "$mlst_base/campylobacter.txt";
+  $meta->{"Ccoli"}->{DELIMITER} = "_";
+
   $meta->{"Cjejuni"}->{FASTA} = "$mlst_base/Campylobacter_jejuni.fasta";
   $meta->{"Cjejuni"}->{DEFINITIONS} = "$mlst_base/campylobacter.txt";
   $meta->{"Cjejuni"}->{DELIMITER} = "_";
