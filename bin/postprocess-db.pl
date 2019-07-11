@@ -472,6 +472,13 @@ if ($push_s3) {
          ($reference_fna eq "" && $f[1] == 1)) {
       @g = split /\//, File::Basename::dirname($f[0]);
       $S3_REFDIR = pop @g;
+      my $species_check = pop @g;
+      if (defined $species_check && length($species_check) && $species_check ne $S3_SPECIES) {
+        # whitelist this for now - Ccoli uses Cjejuni MLST and reference
+        if ($species_check = 'Cjejuni' && $S3_SPECIES eq 'Ccoli') {
+          $S3_SPECIES = $species_check;
+        }
+      }
     }
   }
 
