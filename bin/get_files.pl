@@ -45,6 +45,7 @@ my $internal = 0;	# use this to redirect combining to an ionode job
 my $command;		# temp to hold the command to be run
 my $base_command = File::Spec->rel2abs($0);
 my $ENA_DOWNLOAD = `which ena-fast-download.py`;
+chomp $ENA_DOWNLOAD;
 my $S3_BASE = "s3://chenlabvault1";
 my $S3_PROFILE = "vault";
 
@@ -102,24 +103,24 @@ if (scalar @out) {
   exit;
 }
 
-if ($ARGV[0] =~ /[SED]RR\d+/) {
+if ($ARGV[0] =~ /[SED]RR\d+/ && -x $ENA_DOWNLOAD) {
   # we can handle this with ena-fast-download
   $command = "mkdir -p $dir/$ARGV[0] && $ENA_DOWNLOAD $ARGV[0] --output-directory $dir/$ARGV[0] --quiet";
-  if ($debug) {
-    print STDERR "Trying to get files from ENA. Running command:\n";
-    print STDERR "$command\n";
-  }
-  system ($command);
-  if ($? != 0) {
-    print STDERR "Error from $ENA_DOWNLOAD. Falling back to Genbank.\n";
-  } else {
-    @out = sra_files($run, $dir);
-    if (scalar @out) {
-      print join ($delimiter, @out), "\n";
-      chdir $current;
-      exit;
-    }
-  }
+   if ($debug) {
+     print STDERR "Trying to get files from ENA. Running command:\n";
+     print STDERR "$command\n";
+   }
+   system ($command);
+   if ($? != 0) {
+     print STDERR "Error from $ENA_DOWNLOAD. Falling back to Genbank.\n";
+   } else {
+     @out = sra_files($run, $dir);
+     if (scalar @out) {
+       print join ($delimiter, @out), "\n";
+       chdir $current;
+       exit;
+     }
+   }
 }
 if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   $url = "";
