@@ -106,22 +106,30 @@ if (scalar @out) {
 if ($ARGV[0] =~ /[SED]RR\d+/ && -x $ENA_DOWNLOAD) {
   # we can handle this with ena-fast-download
   $run = $ARGV[0];
+  @out = sra_files($run, $dir);
+  if (scalar @out) {
+    print join ($delimiter, @out), "\n";
+    exit;
+  }
   $command = "mkdir -p $dir/$run && $ENA_DOWNLOAD $run --output-directory $dir/$run --quiet";
-   if ($debug) {
-     print STDERR "Trying to get files from ENA. Running command:\n";
-     print STDERR "$command\n";
-   }
-   system ($command);
-   if ($? != 0) {
-     print STDERR "Error from $ENA_DOWNLOAD. Falling back to Genbank.\n";
-   } else {
-     @out = sra_files($run, $dir);
-     if (scalar @out) {
-       print join ($delimiter, @out), "\n";
-       chdir $current;
-       exit;
-     }
-   }
+  if ($debug) {
+    print STDERR "Trying to get files from ENA. Running command:\n";
+    print STDERR "$command\n";
+  }
+  if ($checkonly) {
+    exit(1);
+  } else {
+    system ($command);
+  }
+  if ($? != 0) {
+    print STDERR "Error from $ENA_DOWNLOAD. Falling back to Genbank.\n";
+  } else {
+    @out = sra_files($run, $dir);
+    if (scalar @out) {
+      print join ($delimiter, @out), "\n";
+      exit;
+    }
+  }
 }
 if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   $url = "";
