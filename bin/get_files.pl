@@ -105,7 +105,8 @@ if (scalar @out) {
 
 if ($ARGV[0] =~ /[SED]RR\d+/ && -x $ENA_DOWNLOAD) {
   # we can handle this with ena-fast-download
-  $command = "mkdir -p $dir/$ARGV[0] && $ENA_DOWNLOAD $ARGV[0] --output-directory $dir/$ARGV[0] --quiet";
+  $run = $ARGV[0];
+  $command = "mkdir -p $dir/$run && $ENA_DOWNLOAD $run --output-directory $dir/$run --quiet";
    if ($debug) {
      print STDERR "Trying to get files from ENA. Running command:\n";
      print STDERR "$command\n";
