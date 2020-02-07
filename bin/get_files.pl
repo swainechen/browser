@@ -111,7 +111,7 @@ if ($ARGV[0] =~ /[SED]RR\d+/ && -x $ENA_DOWNLOAD) {
     print join ($delimiter, @out), "\n";
     exit;
   }
-  $command = "mkdir -p $dir/$run && $ENA_DOWNLOAD $run --output-directory $dir/$run --quiet";
+  $command = "mkdir -p $dir/$run && $ENA_DOWNLOAD $run --output-directory $dir/$run --quiet > /dev/null 2>&1";
   if ($debug) {
     print STDERR "Trying to get files from ENA. Running command:\n";
     print STDERR "$command\n";
@@ -163,7 +163,7 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   system ($command);
   if ($? != 0) {
     if (-x $ENA_DOWNLOAD) {
-      $command = "mkdir -p $dir/$run && $ENA_DOWNLOAD $run --output-directory $dir/$run --quiet";
+      $command = "mkdir -p $dir/$run && $ENA_DOWNLOAD $run --output-directory $dir/$run --quiet > /dev/null 2>&1";
       if ($debug) {
         print STDERR "Trying to get files from ENA. Running command:\n";
         print STDERR "$command\n";
