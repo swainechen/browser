@@ -162,6 +162,27 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   $command = "aws --profile $S3_PROFILE s3 ls $S3_BASE/$ARGV[0]/ > /dev/null";
   system ($command);
   if ($? != 0) {
+    if (-x $ENA_DOWNLOAD) {
+      $command = "mkdir -p $dir/$run && $ENA_DOWNLOAD $run --output-directory $dir/$run --quiet";
+      if ($debug) {
+        print STDERR "Trying to get files from ENA. Running command:\n";
+        print STDERR "$command\n";
+      }
+      if ($checkonly) {
+        exit(1);
+      } else {
+        system ($command);
+      }
+      if ($? != 0) {
+        print STDERR "Error from $ENA_DOWNLOAD. Falling back to Genbank.\n";
+      } else {
+        @out = sra_files($run, $dir);
+        if (scalar @out) {
+          print join ($delimiter, @out), "\n";
+          exit;
+        }
+      }
+    }
     if ($FQD_DOWNLOAD) {
       # let sra utils take care of the urls - can remove make_url procedure and reliance on it now
       $command = "$fqd --split-files --gzip -O $dir/$run $run > /dev/null 2>&1 ; rm -f ~/ncbi/public/sra/$run.sra";
