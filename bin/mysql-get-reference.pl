@@ -1,4 +1,6 @@
-#!/usr/bin/perl -w # # Take in a run number
+#!/usr/bin/perl -w
+#
+# Take in a run number
 # Print out species, reference sequence
 #
 use warnings;
