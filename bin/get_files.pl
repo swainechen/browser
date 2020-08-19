@@ -46,8 +46,8 @@ my $command;		# temp to hold the command to be run
 my $base_command = File::Spec->rel2abs($0);
 my $ENA_DOWNLOAD = `which ena-fast-download.py`;
 chomp $ENA_DOWNLOAD;
-my $S3_BASE = "s3://chenlabvault1";
-my $S3_PROFILE = "vault";
+my $S3_BASE = "";
+my $S3_PROFILE = "";
 
 GetOptions (
   'debug!' => \$debug,
