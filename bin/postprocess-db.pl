@@ -20,10 +20,10 @@ use Getopt::Long;
 use JSON;
 use GERMS;
 
-my $S3_BUCKET = "slchen-lab-outbreaks";
+my $S3_BUCKET = "";
 my $S3_SPECIES = "";
 my $S3_REFDIR = "";
-my $S3_PROFILE = "default";
+my $S3_PROFILE = "";
 my $S3_OP = "cp";
 my $OUTBREAK_BASE = $ENV{"OUTBREAK_BASE"};
 $OUTBREAK_BASE =~ s/\/$//;
