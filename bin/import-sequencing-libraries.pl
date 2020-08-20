@@ -1,12 +1,11 @@
 #!/usr/bin/perl -w
 #
 # take tab delimited text file
-# expected "/home/slchen/rdrive/ID/ID3/Swaine/Chen lab sequencing libraries.txt"
+# need to put in file name (this makes this script hard for anyone else to use)
 # check for changes and do updates
 # database should be configured in etc/GERMS.conf
 # table should be Studies
 #
-use lib '/home/slchen/bin';
 use warnings;
 use strict;
 use slchen;
@@ -23,7 +22,7 @@ my $show_help = 0;
 my $USE_DB = 0;
 my $verbose = 0;
 my $force = 0;	# update no matter what - ignore date stamps
-my $libraries_file = "/home/slchen/rdrive/ID/ID3/Swaine/Chen lab sequencing libraries.txt";
+my $libraries_file = "";
 
 &Getopt::Long::Configure("pass_through");
 GetOptions (
