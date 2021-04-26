@@ -209,6 +209,9 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   }
   chdir $current;
   @out = sra_files($ARGV[0], $dir);
+  if (!scalar @out) {
+    @out = q12($ARGV[0], $dir);
+  }
   if (scalar @out) {
     print join ($delimiter, @out), "\n";
   } else {
