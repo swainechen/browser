@@ -123,7 +123,8 @@ $sth->execute($tip);
 while (@data = $sth->fetchrow_array()) {
   $output->{SRST2}->{MLST}->{$data[2]}->{$data[3]} = "$data[1] ($data[0])";
 }
-if ($sth->rows != 1) {
+# sometimes there's more than 1 because of FASTQ and ASSEMBLY
+if ($sth->rows < 1) {
   $error_srst2 = 1;
 }
 $exit += 8 if $error_srst2;
