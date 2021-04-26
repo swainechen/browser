@@ -20,10 +20,10 @@ use Getopt::Long;
 use JSON;
 use GERMS;
 
-my $S3_BUCKET = "slchen-lab-outbreaks";
+my $S3_BUCKET = "";
 my $S3_SPECIES = "";
 my $S3_REFDIR = "";
-my $S3_PROFILE = "default";
+my $S3_PROFILE = "";
 my $S3_OP = "cp";
 my $OUTBREAK_BASE = $ENV{"OUTBREAK_BASE"};
 $OUTBREAK_BASE =~ s/\/$//;
@@ -472,6 +472,13 @@ if ($push_s3) {
          ($reference_fna eq "" && $f[1] == 1)) {
       @g = split /\//, File::Basename::dirname($f[0]);
       $S3_REFDIR = pop @g;
+      my $species_check = pop @g;
+      if (defined $species_check && length($species_check) && $species_check ne $S3_SPECIES) {
+        # whitelist this for now - Ccoli uses Cjejuni MLST and reference
+        if ($species_check = 'Cjejuni' && $S3_SPECIES eq 'Ccoli') {
+          $S3_SPECIES = $species_check;
+        }
+      }
     }
   }
 
