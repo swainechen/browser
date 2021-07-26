@@ -227,8 +227,6 @@ if (-f $files[0] && -s $files[0]) {
 #      $fastq_data->{Machine} =~ s/\s+$//;
 #    }
 #    $sradbh->disconnect();
-     $fastq_data->{Technology} = "";
-     $fastq_data->{Machine} = "";
   } else {
     $sql = "SELECT Machine FROM Studies WHERE Run = ?";
     $sth = $DBH->prepare($sql);
