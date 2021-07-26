@@ -19,14 +19,11 @@ my $S3_BASE = "";
 my $S3_PROFILE = "";
 
 # some globals
-my $SRADB = $FindBin::Bin . "/../lib/ncbi/SRAmetadb.sqlite";
 my $DBH;
 my %ATTR;
 my $TEMPDIR = "/tmp";
-my $FQD_DOWNLOAD = 0;
 
 my $dir = "";
-my $fqd = "fastq-dump";
 my $combine = 1;	# whether to combine multiple files
 my $delimiter = "\n";	# for output
 my $delete = -1;	# whether to delete files after combining
@@ -60,7 +57,6 @@ GetOptions (
   'wait!' => \$wait,
   'checkonly' => \$checkonly,
   'internal!' => \$internal,
-  'fqd_download!' => \$FQD_DOWNLOAD,
   'help' => \$showhelp
 );
 
@@ -70,7 +66,7 @@ if (defined $ENV{GERMS_DATA}) {
   die "Please set GERMS_DATA environment variable\n";
 }
 if ($showhelp || !defined $ARGV[0] || !length($ARGV[0])) {
-  print "Usage: $0 <ID> [ -delimiter <char> ] [ -debug ] [ -combine|nocombine ] [ -delete|nodelete ] [ -nowait ] [ -hrt <hrt string> ] [ -mem <mem_free string> ] [ -checkonly ] [ -tries <int> ] [ -fqd_download|nofqd_download ]\n";
+  print "Usage: $0 <ID> [ -delimiter <char> ] [ -debug ] [ -combine|nocombine ] [ -delete|nodelete ] [ -nowait ] [ -hrt <hrt string> ] [ -mem <mem_free string> ] [ -checkonly ] [ -tries <int> ]\n";
   print "ID is either some GIS sequencing library ID or a Genbank SRA URL.\n";
   print "This script relies on the GERMS_DATA environment variable being set\n";
   print "Default is to combine - for example HiSeq4K comes in 4 fastq files otherwise\n";
@@ -78,7 +74,6 @@ if ($showhelp || !defined $ARGV[0] || !length($ARGV[0])) {
   print "Default delimiter is newline, this is the separator for multiple filenames in output. This can also be a string, one good one is to use -delimiter \" -q2 \" in a command line.\n";
   print "-checkonly option only looks for files and won't download anything. Will return error code 1 if no files found (i.e. not yet downloaded).\n";
   print "Default tries is 5 (number of retries for downloading from Genbank)\n";
-  print "-fqd_download uses fastq-dump to download sra files from Genbank (default is not to use fastq-dump)\n";
   exit;
 }
 
@@ -135,26 +130,7 @@ if ($ARGV[0] =~ /[SED]RR\d+/ && -x $ENA_DOWNLOAD) {
 }
 if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
   $url = "";
-  $db_query = sra_query($ARGV[0]);
-  if (!defined $db_query || scalar keys %$db_query == 0) {
-    die "Can't find data for $ARGV[0].\n";
-  }
-  if (scalar keys %$db_query > 1) {
-    print STDERR "Ambiguous identifier $ARGV[0] - potential matches:\n";
-    foreach $i (keys %$db_query) {
-      print "$i\t$db_query->{$i}\t", make_url($i, $db_query->{$i});
-    }
-    die;
-  }
-  foreach $i (keys %$db_query) {
-    $run = $i;
-    $url = make_url($i, $db_query->{$i});
-    last;
-  }
-  if (!length $url) {
-    die "Couldn't figure out what $ARGV[0] is.\n";
-  }
-  print STDERR "$url\n" if $debug;
+  $run = $ARGV[0];
   @out = sra_files($run, $dir);
   if (scalar @out) {
     print join ($delimiter, @out), "\n";
@@ -184,16 +160,6 @@ if ($ARGV[0] =~ /[SED]R[APSXR]\d+/) {
           exit;
         }
       }
-    }
-    if ($FQD_DOWNLOAD) {
-      # let sra utils take care of the urls - can remove make_url procedure and reliance on it now
-      $command = "$fqd --split-files --gzip -O $dir/$run $run > /dev/null 2>&1 ; rm -f ~/ncbi/public/sra/$run.sra";
-    } else {
-      $command = "wget $url --tries=$tries --quiet -O $TEMPDIR/$run.sra && $fqd --split-files --gzip -O $dir/$run $TEMPDIR/$run.sra && rm -f $TEMPDIR/$run.sra > /dev/null 2>&1";
-    }
-    if ($debug) {
-      print STDERR "Trying to get files from GenBank SRA. Running command:\n";
-      print STDERR "$command\n";
     }
   } else {
     $command = "mkdir -p $dir/$ARGV[0]; cd $dir/$ARGV[0]; aws --profile $S3_PROFILE s3 sync $S3_BASE/$ARGV[0]/ . > /dev/null 2>&1";
@@ -317,31 +283,6 @@ sub sra_files {
     }
   }
   return @r2;
-}
-
-sub sra_query {
-  # plan to deprecate in favor of ENA - no extraction needed
-  my ($search) = @_;
-  my $q;
-  my $sql;
-  if (!defined $DBH) {
-    $DBH = DBI->connect("DBI:SQLite:dbname=$SRADB", "", "", \%ATTR);
-  }
-  if ($search =~ /^.RR\d/) {
-    $sql = "SELECT run_accession, experiment_accession FROM sra WHERE run_accession = ?";
-  } elsif ($search =~ /^.RX\d/) {
-    $sql = "SELECT run_accession, experiment_accession FROM sra WHERE experiment_accession = ?";
-  } elsif ($search =~ /^.RS\d/) {
-    $sql = "SELECT run_accession, experiment_accession FROM sra WHERE sample_accession = ?";
-  }
-  my $sth = $DBH->prepare($sql);
-  $sth->execute($search);
-  my $r;
-  my @r;
-  while (@r = $sth->fetchrow_array) {
-    $r->{$r[0]} = $r[1];
-  }
-  return $r;
 }
 
 sub q12 {
@@ -499,16 +440,4 @@ sub combine {
       die "Some problem, no $r1out or $r2out in combine...\n";
     }
   }
-}
-
-sub make_url {
-  my ($run, $exp) = @_;
-  return undef if !defined $run || !length $run || !defined $exp || !length $exp;
-#  my $url = "ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/";
-#  $url .= substr($exp, 0, 3) . "/" . substr($exp, 0, 6) . "/" . $exp . "/";
-#  $url .= $run . "/" . $run . ".sra";
-# this changed sometime, edit Nov 2017 - now by run
-  my $url = "ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByRun/sra/";  $url .= substr($run, 0, 3) . "/" . substr($run, 0, 6) . "/" . $run . "/";
-  $url .= $run . ".sra";
-  return($url);
 }
