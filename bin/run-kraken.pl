@@ -1,5 +1,4 @@
-#!/usr/bin/perl -w
-#
+#!/usr/bin/perl -w #
 # just a kraken run
 # taken from GERMS-wgs.pl initially
 #
@@ -10,9 +9,11 @@ use GERMS;
 use Getopt::Long;
 &Getopt::Long::Configure("pass_through");
 
-my $KRAKEN_BIN = `which kraken`; chomp $KRAKEN_BIN;
-my $KRAKEN_REPORT = `which kraken-report`; chomp $KRAKEN_REPORT;
-my $KRAKEN_DB = "/usr/local/lib/kraken/minikraken_20171019_8GB";
+#my $KRAKEN_BIN = `which kraken`; chomp $KRAKEN_BIN;
+#my $KRAKEN_REPORT = `which kraken-report`; chomp $KRAKEN_REPORT;
+#my $KRAKEN_DB = "/usr/local/lib/kraken/minikraken_20171019_8GB";
+my $KRAKEN2_BIN = `which kraken2`; chomp $KRAKEN2_BIN;
+my $KRAKEN2_DB = "/usr/local/lib/Kraken2/minikraken2_v2_8GB_201904_UPDATE";
 my $SEQTK = `which seqtk`; chomp $SEQTK;
 my $q1 = "";
 my $q2 = "";
@@ -97,7 +98,7 @@ sub print_usage {
 sub run_kraken {
   # these files should be downsampled already
   my ($q1, $q2) = @_;
-  my $expected_file = "kraken-out.tmp";
+  my $expected_file = "kraken2-out.report";
   my $command;
   my @f;
   my @g;
@@ -107,19 +108,11 @@ sub run_kraken {
   my $return;
   my @ft = GERMS::file_type($q1);
 
-  $command = "$KRAKEN_BIN --db $KRAKEN_DB";
-  if (lc($ft[0]) eq "fasta") {
-    $command .= " --fasta-input";
-  } else {
-    $command .= " --fastq-input";
-  }
-  if (lc($ft[1]) eq "gzip") {
-    $command .= " --gzip-compressed";
-  }
+  $command = "$KRAKEN2_BIN --db $KRAKEN2_DB --report $expected_file";
   if ($q1 eq $q2 || $q2 eq "") {
     $command .= " $q1";
   } else {
-    $command .= " --paired $q1 $q2";
+    $command .= " $q1 $q2";
   }
   $command .= " 2>&1 > $expected_file";
   # for the kraken run, we're using the trick of 'command 2>&1 > output'
@@ -134,22 +127,22 @@ sub run_kraken {
     @f = split /\n/, $output;
     foreach $i (@f) {
       if ($i =~ /(\d+) sequences .* processed/) {
-        print "Kraken: $1 total sequences processed\n";
+        print "Kraken2: $1 total sequences processed\n";
       } elsif ($i =~ /^\s*\d+ sequences classified/) {
         $i =~ s/^\s+//;
-        print "Kraken: $i\n";
+        print "Kraken2: $i\n";
       } elsif ($i =~ /^\s*\d+ sequences unclassified/) {
         $i =~ s/^\s+//;
-        print "Kraken: $i\n";
+        print "Kraken2: $i\n";
       }
     }
   }
   if (-f $expected_file) {
-    $command = "$KRAKEN_REPORT --db $KRAKEN_DB $expected_file";
-    $output = `$command`;
-    print $output if $VERBOSE;
-    @f = split /\n/, $output;
+    open REPORT, $expected_file;
+    @f = <REPORT>;
+    close REPORT;
     foreach $i (0..$#f) {
+      chomp $f[$i];
       $f[$i] =~ s/^\s+//;
       @g = split /\t/, $f[$i];
       if ($g[3] eq "G" || $g[3] eq "S") {
@@ -164,11 +157,11 @@ sub run_kraken {
              { $parse->{S}->{$a}->{Percent} <=> $parse->{S}->{$b}->{Percent} }
              keys %{$parse->{S}};
       if (scalar(@g)) {
-        print "Kraken classification line: $f[$g[0]]\n" if $VERBOSE;
+        print "Kraken2 classification line: $f[$g[0]]\n" if $VERBOSE;
         $return->{Species}->{Classification} = $parse->{S}->{$g[0]}->{Classification};
         $return->{Species}->{Percent} = $parse->{S}->{$g[0]}->{Percent};
         if ($#g >= 1) {
-          print "Kraken classification line: $f[$g[1]]\n" if $VERBOSE;
+          print "Kraken2 classification line: $f[$g[1]]\n" if $VERBOSE;
           $return->{Species2}->{Classification} = $parse->{S}->{$g[1]}->{Classification};
           $return->{Species2}->{Percent} = $parse->{S}->{$g[1]}->{Percent};
         }
@@ -179,11 +172,11 @@ sub run_kraken {
              { $parse->{G}->{$a}->{Percent} <=> $parse->{G}->{$b}->{Percent} }
              keys %{$parse->{G}};
       if (scalar(@g)) {
-        print "Kraken classification line: $f[$g[0]]\n" if $VERBOSE;
+        print "Kraken2 classification line: $f[$g[0]]\n" if $VERBOSE;
         $return->{Genus}->{Classification} = $parse->{G}->{$g[0]}->{Classification};
         $return->{Genus}->{Percent} = $parse->{G}->{$g[0]}->{Percent};
         if ($#g >= 1) {
-          print "Kraken classification line: $f[$g[1]]\n" if $VERBOSE;
+          print "Kraken2 classification line: $f[$g[1]]\n" if $VERBOSE;
           $return->{Genus2}->{Classification} = $parse->{G}->{$g[1]}->{Classification};
           $return->{Genus2}->{Percent} = $parse->{G}->{$g[1]}->{Percent};
         }
@@ -191,9 +184,8 @@ sub run_kraken {
     }
     return($return);
   } else {
-    print "Couldn't find $expected_file file after initial Kraken run, skipping...\n" if $VERBOSE;
+    print "Couldn't find $expected_file file after initial Kraken2 run, skipping...\n" if $VERBOSE;
     return(undef);
   }
   return(undef);
 }
-

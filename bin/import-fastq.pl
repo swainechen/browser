@@ -21,7 +21,7 @@ use GERMS;
 
 my $GET_FILES = `which get_files.pl`; chomp $GET_FILES;
 my $RUN_KRAKEN = `which run-kraken.pl`; chomp $RUN_KRAKEN;
-my $SRADB = $ENV{"SRADB"};
+#my $SRADB = $ENV{"SRADB"};
 my %ATTR;	# needed for SQLite connection - ?
 my $USE_DB = 0;
 my $verbose = 0;
@@ -214,19 +214,21 @@ if (-f $files[0] && -s $files[0]) {
 
   # get Machine and Technology data
   if ($runID =~ /^[SED]RR\d+/) {
-    my $sradbh = DBI->connect("DBI:SQLite:dbname=$SRADB", "", "", \%ATTR);
-    my $srasql = "SELECT platform, instrument_model FROM sra WHERE run_accession = ?";
-    my $srasth = $sradbh->prepare($srasql);
-    $srasth->execute($runID);
-    while (@f = $srasth->fetchrow_array()) {
-      $fastq_data->{Technology} = $f[0];
-      $fastq_data->{Technology} =~ s/^\s+//;
-      $fastq_data->{Technology} =~ s/\s+$//;
-      $fastq_data->{Machine} = $f[1];
-      $fastq_data->{Machine} =~ s/^\s+//;
-      $fastq_data->{Machine} =~ s/\s+$//;
-    }
-    $sradbh->disconnect();
+#    my $sradbh = DBI->connect("DBI:SQLite:dbname=$SRADB", "", "", \%ATTR);
+#    my $srasql = "SELECT platform, instrument_model FROM sra WHERE run_accession = ?";
+#    my $srasth = $sradbh->prepare($srasql);
+#    $srasth->execute($runID);
+#    while (@f = $srasth->fetchrow_array()) {
+#      $fastq_data->{Technology} = $f[0];
+#      $fastq_data->{Technology} =~ s/^\s+//;
+#      $fastq_data->{Technology} =~ s/\s+$//;
+#      $fastq_data->{Machine} = $f[1];
+#      $fastq_data->{Machine} =~ s/^\s+//;
+#      $fastq_data->{Machine} =~ s/\s+$//;
+#    }
+#    $sradbh->disconnect();
+     $fastq_data->{Technology} = "";
+     $fastq_data->{Machine} = "";
   } else {
     $sql = "SELECT Machine FROM Studies WHERE Run = ?";
     $sth = $DBH->prepare($sql);
